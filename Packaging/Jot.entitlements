@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Jot runs fully sandboxed with no additional entitlements. It never
+      requests network client/server access, and `NoteStore`'s use of
+      `FileManager`'s `applicationSupportDirectory` resolves transparently
+      to this app's own sandbox container, so no
+      `com.apple.security.files.*` entitlement is needed either.
+    -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+</dict>
+</plist>
