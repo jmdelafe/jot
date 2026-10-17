@@ -19,8 +19,17 @@ describe("bridge", () => {
     expect(postMessage).toHaveBeenCalledWith({ type: "openLink", url: "https://example.com" });
 
     const doc = { type: "doc", content: [] };
-    bridge.contentChanged(doc);
-    expect(postMessage).toHaveBeenCalledWith({ type: "contentChanged", document: doc });
+    bridge.contentChanged("note-1", doc);
+    expect(postMessage).toHaveBeenCalledWith({ type: "contentChanged", noteId: "note-1", document: doc });
+
+    bridge.setPinned("note-1", true);
+    expect(postMessage).toHaveBeenCalledWith({ type: "setPinned", id: "note-1", pinned: true });
+
+    bridge.exportNote("markdown", "# Hi");
+    expect(postMessage).toHaveBeenCalledWith({ type: "exportNote", format: "markdown", text: "# Hi" });
+
+    bridge.preferredHeight(240);
+    expect(postMessage).toHaveBeenCalledWith({ type: "preferredHeight", height: 240 });
   });
 
   it("does not throw when no native bridge is present", () => {

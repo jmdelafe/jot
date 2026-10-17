@@ -9,12 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
     private var panelController: PanelController?
     private var hotkeyManager: HotkeyManager?
-    private let noteStore = NoteStore()
+    private let library = NotesLibrary()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        let panelController = PanelController(noteStore: noteStore)
+        let panelController = PanelController(library: library)
         self.panelController = panelController
         panelController.onCorruptedNote = { [weak self] preservedURL in
             self?.presentCorruptedNoteAlert(preservedURL: preservedURL)
@@ -28,7 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let statusItemController = StatusItemController()
         statusItemController.onToggle = { [weak panelController] in panelController?.toggle() }
-        statusItemController.onClearNote = { [weak panelController] in panelController?.requestClearNote() }
+        statusItemController.onNewNote = { [weak panelController] in panelController?.newNote() }
+        statusItemController.onBrowseNotes = { [weak panelController] in panelController?.showNotesBrowser() }
         statusItemController.onQuit = { NSApp.terminate(nil) }
         self.statusItemController = statusItemController
 
@@ -39,6 +40,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             presentHotkeyRegistrationFailureAlert(error: error)
         }
+    }
+
+    /// Launching Jot again (Finder, Spotlight, `open`) brings the note up.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        panelController?.show()
+        return false
     }
 
     /// Flush any pending debounced save before the app actually exits so a
@@ -56,8 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func presentCorruptedNoteAlert(preservedURL: URL) {
         let alert = NSAlert()
         alert.messageText = "Note Could Not Be Read"
-        alert.informativeText = "Jot started with a blank note because the saved file was unreadable. "
-            + "The original file was kept at:\n\(preservedURL.path)"
+        alert.informativeText = "Part of Jot's saved data was unreadable, so it was set aside instead of being "
+            + "overwritten. The original file was kept at:\n\(preservedURL.path)"
         alert.alertStyle = .warning
         alert.addButton(withTitle: "OK")
         alert.runModal()

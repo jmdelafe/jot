@@ -58,33 +58,49 @@ describe("createEditor", () => {
     editor.destroy();
   });
 
-  it("loadDocument replaces content without emitting a bridge update", () => {
+  it("loadNote replaces content without emitting a bridge update", () => {
     const jotEditor = createEditor(mount);
     vi.clearAllMocks();
 
-    const replacement = JSON.stringify({
-      type: "doc",
-      content: [{ type: "paragraph", content: [{ type: "text", text: "restored" }] }]
+    jotEditor.loadNote({
+      id: "note-1",
+      document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "restored" }] }] }
     });
-    jotEditor.loadDocument(replacement);
 
+    expect(jotEditor.noteId).toBe("note-1");
     expect(jotEditor.editor.getText()).toBe("restored");
+    expect(jotEditor.editor.state.selection.from).toBe("restored".length + 1);
     expect(bridge.contentChanged).not.toHaveBeenCalled();
     jotEditor.editor.destroy();
   });
 
-  it("clearDocument resets to an empty document and notifies the bridge", () => {
+  it("tags content changes with the loaded note id and stays silent before one is loaded", () => {
     const jotEditor = createEditor(mount);
-    jotEditor.editor.commands.insertContent("not empty");
-    vi.clearAllMocks();
+    jotEditor.editor.commands.insertContent("orphan");
+    expect(bridge.contentChanged).not.toHaveBeenCalled();
 
-    jotEditor.clearDocument();
+    jotEditor.loadNote({ id: "note-2", document: { type: "doc", content: [{ type: "paragraph" }] } });
+    jotEditor.editor.commands.insertContent("typed");
+    expect(bridge.contentChanged).toHaveBeenLastCalledWith("note-2", expect.objectContaining({ type: "doc" }));
+    jotEditor.editor.destroy();
+  });
 
-    expect(jotEditor.editor.getJSON()).toEqual({
-      type: "doc",
-      content: [{ type: "paragraph" }]
+  it("serializes notes as Markdown, HTML and plain text", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.loadNote({
+      id: "note-3",
+      document: {
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Title" }] },
+          { type: "paragraph", content: [{ type: "text", text: "bold", marks: [{ type: "bold" }] }] }
+        ]
+      }
     });
-    expect(bridge.contentChanged).toHaveBeenCalledTimes(1);
+
+    expect(jotEditor.serialize("markdown")).toBe("# Title\n\n**bold**");
+    expect(jotEditor.serialize("html")).toBe("<h1>Title</h1><p><strong>bold</strong></p>");
+    expect(jotEditor.serialize("plainText")).toBe("Title\nbold");
     jotEditor.editor.destroy();
   });
 });

@@ -16,6 +16,7 @@ describe("active Markdown editing", () => {
     mount = document.createElement("div");
     document.body.appendChild(mount);
     jot = createEditor(mount);
+    jot.loadNote({ id: "note-1", document: { type: "doc", content: [{ type: "paragraph" }] } });
     vi.clearAllMocks();
   });
 
@@ -53,7 +54,7 @@ describe("active Markdown editing", () => {
     expect(rendered.firstChild!.attrs.level).toBe(2);
     expect(rendered.firstChild!.textContent).toBe("Edited text");
     expect(rendered.firstChild!.lastChild!.marks[0].type.name).toBe("bold");
-    expect(bridge.contentChanged).toHaveBeenLastCalledWith(rendered.toJSON());
+    expect(bridge.contentChanged).toHaveBeenLastCalledWith("note-1", rendered.toJSON());
     jot.editor.commands.setTextSelection(jot.editor.state.doc.firstChild!.nodeSize + 1);
     expect(jot.editor.state.doc.firstChild!.type.name).toBe("heading");
     expect(jot.editor.state.doc.firstChild!.attrs.level).toBe(2);
@@ -169,7 +170,7 @@ describe("active Markdown editing", () => {
     focus(6);
     jot.editor.view.dispatch(jot.editor.state.tr.insertText("!"));
     const saved = renderedDocument(jot.editor).toJSON();
-    jot.loadDocument(JSON.stringify(saved));
+    jot.loadNote({ id: "note-1", document: saved as never });
     expect(renderedDocument(jot.editor).toJSON()).toEqual(saved);
     expect(jot.editor.commands.undo()).toBe(false);
   });

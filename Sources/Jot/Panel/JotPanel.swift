@@ -12,7 +12,7 @@ final class JotPanel: NSPanel {
 
     convenience init() {
         self.init(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 220),
             styleMask: [.titled, .closable, .resizable, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -22,11 +22,12 @@ final class JotPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         titlebarAppearsTransparent = true
         titleVisibility = .hidden
+        title = "Untitled"
         isOpaque = false
         backgroundColor = .clear
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
-        minSize = NSSize(width: 360, height: 260)
+        minSize = NSSize(width: 340, height: 140)
         hidesOnDeactivate = false
         standardWindowButton(.zoomButton)?.isHidden = true
         let restored = setFrameUsingName("JotPanel")

@@ -67,3 +67,15 @@ extension JSONValue {
         return nil
     }
 }
+
+extension JSONValue {
+    public var numberValue: Double? {
+        if case .number(let value) = self { return value }
+        return nil
+    }
+
+    public var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
+    }
+}

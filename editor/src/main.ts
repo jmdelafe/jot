@@ -1,7 +1,11 @@
 import "./style.css";
 import { createEditor } from "./editor";
 import { mountFormatBar } from "./formatBar";
-import type { NativeBridge } from "./protocol";
+import { Palette, type PaletteItem, type PaletteMode } from "./palette";
+import { notesMode } from "./notesBrowser";
+import { installAutosize } from "./autosize";
+import { bridge } from "./bridge";
+import type { ExportFormat, NativeBridge, NotePayload, NotesPayload } from "./protocol";
 
 const editorMount = document.getElementById("editor");
 const formatBarMount = document.getElementById("format-bar");
@@ -10,18 +14,192 @@ if (!editorMount || !formatBarMount) {
   throw new Error("Jot editor host is missing required DOM mount points.");
 }
 
-const jotEditor = createEditor(editorMount);
-mountFormatBar(formatBarMount, jotEditor.editor, jotEditor.linkPopover);
+const FORMAT_BAR_KEY = "jot.formatBarVisible";
+const jot = createEditor(editorMount);
+let notes: NotesPayload = { currentId: null, notes: [] };
+
+const focusEditor = () => jot.focus();
+const palette = new Palette(() => autosize.schedule());
+const autosize = installAutosize(editorMount, formatBarMount, () => palette.isOpen);
+jot.editor.on("update", () => autosize.schedule());
+
+function readFormatBarPreference(): boolean {
+  try {
+    return localStorage.getItem(FORMAT_BAR_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function setFormatBarVisible(visible: boolean): void {
+  formatBarMount!.hidden = !visible;
+  try {
+    localStorage.setItem(FORMAT_BAR_KEY, String(visible));
+  } catch {
+    // Preference persistence is best-effort.
+  }
+  autosize.schedule();
+}
+
+mountFormatBar(formatBarMount, jot.editor, jot.linkPopover, () => {
+  setFormatBarVisible(false);
+  focusEditor();
+});
+setFormatBarVisible(readFormatBarPreference());
+
+const toast = document.createElement("div");
+toast.className = "jot-toast";
+toast.setAttribute("role", "status");
+toast.hidden = true;
+document.body.appendChild(toast);
+let toastTimer: number | undefined;
+function showToast(message: string): void {
+  toast.textContent = message;
+  toast.hidden = false;
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => (toast.hidden = true), 1400);
+}
+
+const currentNote = () => notes.notes.find(note => note.id === jot.noteId);
+
+const noteActions = {
+  open: (id: string) => bridge.openNote(id),
+  restore: (id: string) => bridge.restoreNote(id),
+  remove: (id: string) => bridge.deleteNote(id),
+  purge: (id: string) => bridge.purgeNote(id),
+  setPinned: (id: string, pinned: boolean) => bridge.setPinned(id, pinned)
+};
+
+function togglePinCurrent(): void {
+  if (!jot.noteId) return;
+  const pinned = currentNote()?.pinned ?? false;
+  bridge.setPinned(jot.noteId, !pinned);
+  showToast(pinned ? "Unpinned Note" : "Pinned Note");
+}
+
+function deleteCurrent(): void {
+  if (jot.noteId) bridge.deleteNote(jot.noteId);
+}
+
+function copy(format: ExportFormat): void {
+  bridge.copyText(jot.serialize(format));
+  showToast("Copied to Clipboard");
+}
+
+const FORMAT_LABELS: Record<ExportFormat, string> = {
+  markdown: "Markdown",
+  html: "HTML",
+  plainText: "Plain Text"
+};
+
+function actionItems(): PaletteItem[] {
+  const pinned = currentNote()?.pinned ?? false;
+  const formatBarVisible = !formatBarMount!.hidden;
+  const formats = Object.keys(FORMAT_LABELS) as ExportFormat[];
+  return [
+    { id: "new", section: "Note", title: "New Note", shortcut: ["⌘", "N"], run: () => bridge.newNote() },
+    { id: "browse", section: "Note", title: "Browse Notes", shortcut: ["⌘", "P"], run: showNotes },
+    {
+      id: "pin", section: "Note", title: pinned ? "Unpin Note" : "Pin Note",
+      shortcut: ["⇧", "⌘", "P"], run: togglePinCurrent
+    },
+    {
+      id: "format-bar", section: "Note", title: formatBarVisible ? "Hide Format Bar" : "Show Format Bar",
+      shortcut: ["⇧", "⌘", "F"], run: () => setFormatBarVisible(!formatBarVisible)
+    },
+    ...formats.map((format): PaletteItem => ({
+      id: `copy-${format}`, section: "Copy", title: `Copy as ${FORMAT_LABELS[format]}`,
+      shortcut: format === "markdown" ? ["⇧", "⌘", "C"] : undefined, run: () => copy(format)
+    })),
+    ...formats.map((format): PaletteItem => ({
+      id: `export-${format}`, section: "Export", title: `Export as ${FORMAT_LABELS[format]}…`,
+      run: () => bridge.exportNote(format, jot.serialize(format))
+    })),
+    { id: "delete", section: "Danger Zone", title: "Delete Note", shortcut: ["⌃", "X"], danger: true, run: deleteCurrent }
+  ];
+}
+
+const actionsMode: PaletteMode = {
+  name: "actions",
+  placeholder: "Search for actions…",
+  items: actionItems,
+  onKey(event) {
+    if (event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "x") {
+      palette.close();
+      deleteCurrent();
+      return true;
+    }
+    return false;
+  }
+};
+
+function showNotes(): void {
+  bridge.requestNotes();
+  palette.open(notesMode(() => notes, noteActions), focusEditor);
+}
+
+function showActions(): void {
+  bridge.requestNotes();
+  palette.open(actionsMode, focusEditor);
+}
+
+function togglePalette(mode: "notes" | "actions"): void {
+  if (palette.modeName === mode) {
+    palette.close();
+  } else if (mode === "notes") {
+    showNotes();
+  } else {
+    showActions();
+  }
+}
+
+// Capture phase so app-level shortcuts win over the editor's own keymaps.
+window.addEventListener("keydown", event => {
+  if (!event.metaKey || event.altKey || event.ctrlKey) return;
+  const key = event.key.toLowerCase();
+  let handled = true;
+  if (!event.shiftKey && key === "n") {
+    palette.close(false);
+    bridge.newNote();
+  } else if (!event.shiftKey && key === "p") {
+    togglePalette("notes");
+  } else if (!event.shiftKey && key === "k") {
+    togglePalette("actions");
+  } else if (!event.shiftKey && key === "w") {
+    bridge.hide();
+  } else if (event.shiftKey && key === "p" && !palette.isOpen) {
+    togglePinCurrent();
+  } else if (event.shiftKey && key === "f" && !palette.isOpen) {
+    setFormatBarVisible(formatBarMount.hidden);
+  } else if (event.shiftKey && key === "c" && !palette.isOpen) {
+    copy("markdown");
+  } else {
+    handled = false;
+  }
+  if (handled) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}, true);
 
 const nativeBridge: NativeBridge = {
-  loadDocument(json: string) {
-    jotEditor.loadDocument(json);
+  loadNote(json: string) {
+    jot.loadNote(JSON.parse(json) as NotePayload);
+    autosize.schedule();
+    bridge.requestNotes();
+  },
+  setNotes(json: string) {
+    notes = JSON.parse(json) as NotesPayload;
+    palette.refresh();
   },
   focusEditor() {
-    jotEditor.focus();
+    if (!palette.isOpen) focusEditor();
   },
-  clearDocument() {
-    jotEditor.clearDocument();
+  showNotes() {
+    togglePalette("notes");
+  },
+  showActions() {
+    togglePalette("actions");
   }
 };
 

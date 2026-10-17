@@ -3,8 +3,8 @@ import WebKit
 import JotCore
 
 /// Owns the always-warm WKWebView hosting the TipTap editor and the narrow
-/// typed bridge between it and native Swift. The message vocabulary is
-/// deliberately small: ready, content changed, and open link.
+/// typed bridge between it and native Swift. The message vocabulary lives in
+/// `InboundBridgeMessage` (and `editor/src/protocol.ts`).
 ///
 /// Everything here runs on the main actor because `WKWebView` itself is
 /// main-actor-isolated; `MessageRelay` is the one deliberate exception,
@@ -14,9 +14,7 @@ import JotCore
 final class EditorBridge: NSObject {
     let webView: WKWebView
 
-    var onReady: (() -> Void)?
-    var onContentChanged: ((JSONValue) -> Void)?
-    var onOpenLink: ((URL) -> Void)?
+    var onMessage: ((InboundBridgeMessage) -> Void)?
     var onInvalidMessage: ((Error) -> Void)?
 
     override init() {
@@ -64,16 +62,28 @@ final class EditorBridge: NSObject {
         return nil
     }
 
-    func loadDocument(_ document: NoteDocument) {
-        evaluate(function: "window.jot && window.jot.loadDocument", withJSONArgument: document.json)
+    func loadNote(_ opened: OpenedNote) {
+        evaluate(function: "window.jot && window.jot.loadNote", withJSONArgument: OutboundBridgePayload.note(opened))
+    }
+
+    func setNotes(_ snapshot: NotesSnapshot) {
+        evaluate(function: "window.jot && window.jot.setNotes", withJSONArgument: OutboundBridgePayload.notes(snapshot))
     }
 
     func focusEditor() {
-        evaluateJavaScript("window.jot && window.jot.focusEditor && window.jot.focusEditor();")
+        call("focusEditor")
     }
 
-    func clearDocument() {
-        evaluateJavaScript("window.jot && window.jot.clearDocument && window.jot.clearDocument();")
+    func showNotes() {
+        call("showNotes")
+    }
+
+    func showActions() {
+        call("showActions")
+    }
+
+    private func call(_ name: String) {
+        evaluateJavaScript("window.jot && window.jot.\(name) && window.jot.\(name)();")
     }
 
     private func evaluate(function: String, withJSONArgument value: JSONValue) {
@@ -100,15 +110,7 @@ final class EditorBridge: NSObject {
 
     private func handle(_ message: WKScriptMessage) {
         do {
-            let decoded = try InboundBridgeMessage.decode(fromScriptMessageBody: message.body)
-            switch decoded {
-            case .ready:
-                onReady?()
-            case .contentChanged(let json):
-                onContentChanged?(json)
-            case .openLink(let url):
-                onOpenLink?(url)
-            }
+            onMessage?(try InboundBridgeMessage.decode(fromScriptMessageBody: message.body))
         } catch {
             onInvalidMessage?(error)
         }

@@ -11,6 +11,13 @@ interface ButtonSpec {
   run: (editor: Editor) => void;
 }
 
+const SHORTCUTS: Record<string, string> = {
+  "Heading 1": "⌥⌘1", "Heading 2": "⌥⌘2", "Heading 3": "⌥⌘3",
+  Bold: "⌘B", Italic: "⌘I", Underline: "⌘U", Strikethrough: "⇧⌘X", "Inline code": "⌘E",
+  "Bulleted list": "⇧⌘8", "Numbered list": "⇧⌘7", "Task list": "⇧⌘9",
+  Quote: "⇧⌘B", "Code block": "⌥⌘C", Link: "⌘L"
+};
+
 const GROUPS: ButtonSpec[][] = [
   [
     { label: "Heading 1", glyph: "H1", isActive: (s) => isActive(s, "heading", { level: 1 }), run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
@@ -37,7 +44,12 @@ const GROUPS: ButtonSpec[][] = [
   ]
 ];
 
-export function mountFormatBar(container: HTMLElement, editor: Editor, linkPopover: LinkPopover): void {
+export function mountFormatBar(
+  container: HTMLElement,
+  editor: Editor,
+  linkPopover: LinkPopover,
+  onClose?: () => void
+): void {
   container.innerHTML = "";
   const buttons: { spec: ButtonSpec; el: HTMLButtonElement }[] = [];
 
@@ -52,7 +64,7 @@ export function mountFormatBar(container: HTMLElement, editor: Editor, linkPopov
       button.type = "button";
       button.className = "jot-format-button";
       button.textContent = spec.glyph;
-      button.title = spec.label;
+      button.title = SHORTCUTS[spec.label] ? `${spec.label}  ${SHORTCUTS[spec.label]}` : spec.label;
       button.setAttribute("aria-label", spec.label);
       button.addEventListener("mousedown", event => event.preventDefault());
       button.addEventListener("click", () => {
@@ -67,6 +79,18 @@ export function mountFormatBar(container: HTMLElement, editor: Editor, linkPopov
     }
     container.appendChild(groupEl);
   });
+
+  if (onClose) {
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "jot-format-close";
+    close.title = "Hide Format Bar (⇧⌘F)";
+    close.setAttribute("aria-label", "Hide Format Bar");
+    close.textContent = "×";
+    close.addEventListener("mousedown", event => event.preventDefault());
+    close.addEventListener("click", onClose);
+    container.appendChild(close);
+  }
 
   const refresh = () => {
     const state = renderedState(editor);
