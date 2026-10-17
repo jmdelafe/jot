@@ -37,9 +37,7 @@ final class PanelController: NSObject {
         do {
             try bridge.loadEditor()
         } catch {
-            // Loading the bundled editor should never fail in a correctly
-            // packaged build; if it does, there is nothing useful to show.
-            assertionFailure("Failed to load bundled editor: \(error)")
+            NSLog("Jot: failed to load bundled editor: \(error)")
         }
     }
 
@@ -57,6 +55,7 @@ final class PanelController: NSObject {
         recenterIfOffscreen()
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+        panel.makeFirstResponder(bridge.webView)
         if hasLoadedInitialDocument {
             bridge.focusEditor()
         } else {
@@ -147,7 +146,17 @@ final class PanelController: NSObject {
         let glass = NSGlassEffectView()
         glass.style = .regular
         glass.cornerRadius = 16
-        glass.contentView = webView
+        let content = NSView()
+        glass.contentView = content
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(webView)
+        // Leave the native title bar available for dragging and window controls.
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: content.safeAreaLayoutGuide.topAnchor),
+            webView.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            webView.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
         return glass
     }
 

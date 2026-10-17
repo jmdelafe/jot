@@ -1,7 +1,6 @@
 import "./style.css";
 import { createEditor } from "./editor";
 import { mountFormatBar } from "./formatBar";
-import { LinkPopover } from "./linkPopover";
 import type { NativeBridge } from "./protocol";
 
 const editorMount = document.getElementById("editor");
@@ -12,8 +11,7 @@ if (!editorMount || !formatBarMount) {
 }
 
 const jotEditor = createEditor(editorMount);
-const linkPopover = new LinkPopover();
-mountFormatBar(formatBarMount, jotEditor.editor, linkPopover);
+mountFormatBar(formatBarMount, jotEditor.editor, jotEditor.linkPopover);
 
 const nativeBridge: NativeBridge = {
   loadDocument(json: string) {

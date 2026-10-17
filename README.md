@@ -2,7 +2,7 @@
 
 A macOS menu bar scratchpad. Press **⌥⌘N** to toggle a floating rich-text
 panel. Your note saves automatically and stays available across app launches.
-No Dock icon, account, or network access required.
+No Dock icon, account, or internet connection required.
 
 ## Requirements
 
@@ -22,9 +22,16 @@ make run
 `make bootstrap` installs the editor dependencies. `make run` builds the
 editor and release app, creates an ad-hoc-signed `build/Jot.app`, and launches
 it. Click the menu bar icon or press **⌥⌘N** to open or hide the panel.
+Drag the title bar beside the window controls to move it. The editor sits
+below that drag area, over a transparent Liquid Glass background.
 
 Use the format bar or Markdown-style shortcuts such as `## `, `- `, and
-`> ` to format your note. **Clear Note** asks for confirmation before
+`> ` to format your note. Placing the cursor in formatted text reveals
+editable Markdown for that block (including its list or quote container);
+moving away renders it again. Notes still save as rich text, including
+edits made while Markdown is visible. Link editing opens only on request
+and dismisses on Save, Remove, Escape, clicking away, or leaving the window.
+**Clear Note** asks for confirmation before
 removing its contents.
 
 Notes are stored locally in the sandbox container:
@@ -35,6 +42,9 @@ Notes are stored locally in the sandbox container:
 
 The app is signed for local development, not notarized for distribution.
 Gatekeeper may flag it when copied to another machine.
+The app remains sandboxed. Its network client entitlement is required for
+WebKit's helper processes to initialize, even though the editor loads only
+bundled content and works offline.
 
 ## Development
 

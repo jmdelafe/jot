@@ -22,6 +22,8 @@ final class JotPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         titlebarAppearsTransparent = true
         titleVisibility = .hidden
+        isOpaque = false
+        backgroundColor = .clear
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
         minSize = NSSize(width: 360, height: 260)
