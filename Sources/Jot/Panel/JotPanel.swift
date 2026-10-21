@@ -27,7 +27,7 @@ final class JotPanel: NSPanel {
         backgroundColor = .clear
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
-        minSize = NSSize(width: 460, height: 240)
+        minSize = NSSize(width: 240, height: 420)
         hidesOnDeactivate = false
         standardWindowButton(.zoomButton)?.isHidden = true
         let restored = setFrameUsingName("JotPanel")
