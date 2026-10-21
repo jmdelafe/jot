@@ -12,7 +12,7 @@ final class JotPanel: NSPanel {
 
     convenience init() {
         self.init(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 220),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 260),
             styleMask: [.titled, .closable, .resizable, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -27,13 +27,17 @@ final class JotPanel: NSPanel {
         backgroundColor = .clear
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
-        minSize = NSSize(width: 340, height: 140)
+        minSize = NSSize(width: 460, height: 240)
         hidesOnDeactivate = false
         standardWindowButton(.zoomButton)?.isHidden = true
         let restored = setFrameUsingName("JotPanel")
         setFrameAutosaveName("JotPanel")
         if !restored {
             center()
+        } else if frame.width < minSize.width || frame.height < minSize.height {
+            // Frames saved before the minimum was raised; keep the top edge fixed.
+            let size = NSSize(width: max(frame.width, minSize.width), height: max(frame.height, minSize.height))
+            setFrame(NSRect(x: frame.minX, y: frame.maxY - size.height, width: size.width, height: size.height), display: false)
         }
     }
 
