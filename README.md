@@ -1,8 +1,9 @@
 # Jot
 
-A macOS menu bar scratchpad. Press **⌥⌘N** to toggle a floating rich-text
-panel. Your note saves automatically and stays available across app launches.
-No Dock icon, account, or network access required.
+A fast, local, Raycast Notes-style scratchpad for the macOS menu bar. Press
+**⌥⌘N** to toggle a floating Liquid Glass note. Notes save automatically and
+stay available across app launches. No Dock icon, account, or internet
+connection required.
 
 ## Requirements
 
@@ -21,20 +22,43 @@ make run
 
 `make bootstrap` installs the editor dependencies. `make run` builds the
 editor and release app, creates an ad-hoc-signed `build/Jot.app`, and launches
-it. Click the menu bar icon or press **⌥⌘N** to open or hide the panel.
+it.
 
-Use the format bar or Markdown-style shortcuts such as `## `, `- `, and
-`> ` to format your note. **Clear Note** asks for confirmation before
-removing its contents.
+### Using Jot
 
-Notes are stored locally in the sandbox container:
+- **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
+  ⌥-click the icon for a new note; right-click it for a menu.
+- **Window:** drag the title bar to move it. The note title is centered; the
+  ⌘, list, and + buttons open Actions, Browse Notes, and New Note. The window
+  grows and shrinks with its content and remembers its width.
+- **Multiple notes:** **⌘N** creates a note (an empty note is reused, and
+  empty notes are discarded when you leave them). **⌘P** opens a searchable
+  list of notes, with pinned notes first. In the list, **⇧⌘P** pins and **⌃X**
+  deletes. Deleted notes stay in *Recently Deleted* for 60 days, where you can
+  restore them.
+- **Actions (⌘K):** pin, show or hide the format bar (**⇧⌘F**), copy as
+  Markdown (**⇧⌘C**), HTML, or plain text, export to a file, or delete.
+- **Formatting:** use Markdown-style shortcuts such as `## `, `- `, and `> `,
+  or the optional format bar. Placing the cursor in formatted text reveals its
+  editable Markdown; moving away renders it again. **⌘L** edits a link.
+- **Escape** closes the open palette or popover, otherwise it hides Jot.
+
+Notes are stored locally in the sandbox container, one JSON file per note plus
+an index:
 
 ```text
-~/Library/Containers/com.jmdelafe.jot/Data/Library/Application Support/Jot/note.json
+~/Library/Containers/com.jmdelafe.jot/Data/Library/Application Support/Jot/Notes/
 ```
+
+A note saved by an earlier single-note version (`Jot/note.json`) is imported
+automatically on first launch.
 
 The app is signed for local development, not notarized for distribution.
 Gatekeeper may flag it when copied to another machine.
+The app remains sandboxed. Its network client entitlement is required for
+WebKit's helper processes to initialize, even though the editor loads only
+bundled content and works offline. The user-selected read-write file
+entitlement is used only by the export save panel.
 
 ## Development
 
@@ -49,6 +73,8 @@ Gatekeeper may flag it when copied to another machine.
 Swift tests run through `swift run JotTestRunner` rather than `swift test`.
 This works around a Command Line Tools-only toolchain issue where the
 SwiftPM test driver builds the test bundle but does not execute its tests.
+If the default build system cannot load the Swift Testing macros, run
+`swift run --build-system native JotTestRunner`.
 
 ## Project layout
 

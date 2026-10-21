@@ -1,4 +1,4 @@
-import type { JSONValue, OutboundMessage } from "./protocol";
+import type { ExportFormat, JSONValue, OutboundMessage } from "./protocol";
 
 /**
  * Thin wrapper around the WKScriptMessageHandler bridge. Falls back to a
@@ -19,11 +19,44 @@ export const bridge = {
   ready(): void {
     post({ type: "ready" });
   },
-  contentChanged(document: JSONValue): void {
-    post({ type: "contentChanged", document });
+  contentChanged(noteId: string, document: JSONValue): void {
+    post({ type: "contentChanged", noteId, document });
   },
   openLink(url: string): void {
     post({ type: "openLink", url });
+  },
+  newNote(): void {
+    post({ type: "newNote" });
+  },
+  openNote(id: string): void {
+    post({ type: "openNote", id });
+  },
+  deleteNote(id: string): void {
+    post({ type: "deleteNote", id });
+  },
+  restoreNote(id: string): void {
+    post({ type: "restoreNote", id });
+  },
+  purgeNote(id: string): void {
+    post({ type: "purgeNote", id });
+  },
+  setPinned(id: string, pinned: boolean): void {
+    post({ type: "setPinned", id, pinned });
+  },
+  requestNotes(): void {
+    post({ type: "requestNotes" });
+  },
+  copyText(text: string): void {
+    post({ type: "copyText", text });
+  },
+  exportNote(format: ExportFormat, text: string): void {
+    post({ type: "exportNote", format, text });
+  },
+  preferredHeight(height: number): void {
+    post({ type: "preferredHeight", height });
+  },
+  hide(): void {
+    post({ type: "hide" });
   }
 };
 

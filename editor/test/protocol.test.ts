@@ -8,8 +8,9 @@ describe("isOutboundMessage", () => {
 
   it("accepts a contentChanged message with a document payload", () => {
     expect(
-      isOutboundMessage({ type: "contentChanged", document: { type: "doc", content: [] } })
+      isOutboundMessage({ type: "contentChanged", noteId: "n", document: { type: "doc", content: [] } })
     ).toBe(true);
+    expect(isOutboundMessage({ type: "contentChanged", document: {} })).toBe(false);
   });
 
   it("rejects a contentChanged message missing its document", () => {
@@ -22,6 +23,18 @@ describe("isOutboundMessage", () => {
 
   it("rejects an openLink message with a non-string url", () => {
     expect(isOutboundMessage({ type: "openLink", url: 42 })).toBe(false);
+  });
+
+  it("validates note library and utility messages", () => {
+    expect(isOutboundMessage({ type: "newNote" })).toBe(true);
+    expect(isOutboundMessage({ type: "openNote", id: "n" })).toBe(true);
+    expect(isOutboundMessage({ type: "openNote" })).toBe(false);
+    expect(isOutboundMessage({ type: "setPinned", id: "n", pinned: true })).toBe(true);
+    expect(isOutboundMessage({ type: "setPinned", id: "n" })).toBe(false);
+    expect(isOutboundMessage({ type: "exportNote", format: "html", text: "" })).toBe(true);
+    expect(isOutboundMessage({ type: "exportNote", format: "pdf", text: "" })).toBe(false);
+    expect(isOutboundMessage({ type: "preferredHeight", height: 200 })).toBe(true);
+    expect(isOutboundMessage({ type: "preferredHeight", height: -1 })).toBe(false);
   });
 
   it("rejects unknown message types", () => {

@@ -3,13 +3,19 @@
 <plist version="1.0">
 <dict>
     <!--
-      Jot runs fully sandboxed with no additional entitlements. It never
-      requests network client/server access, and `NoteStore`'s use of
-      `FileManager`'s `applicationSupportDirectory` resolves transparently
-      to this app's own sandbox container, so no
-      `com.apple.security.files.*` entitlement is needed either.
+      WebKit requires the network client entitlement to initialize its
+      helper processes, even for the bundled file-only editor. Jot does
+      not load remote pages or require an internet connection.
+      `NotesLibrary`'s use of `applicationSupportDirectory` resolves to
+      this app's own sandbox container. The user-selected read/write
+      entitlement is only for "Export…", which writes where the user picks
+      in a save panel.
     -->
     <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 </dict>
 </plist>
