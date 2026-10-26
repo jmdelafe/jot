@@ -1,4 +1,5 @@
 import { Editor, getHTMLFromFragment } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -26,6 +27,12 @@ export interface JotEditor {
 }
 
 const EMPTY_DOCUMENT = { type: "doc", content: [{ type: "paragraph" }] };
+const PLACEHOLDER = "Jot down anything…";
+
+function isBlankDocument(doc: ProseMirrorNode): boolean {
+  const only = doc.childCount === 1 ? doc.firstChild : null;
+  return only !== null && only.type.name === "paragraph" && only.childCount === 0;
+}
 
 export function createEditor(mountEl: HTMLElement): JotEditor {
   const linkPopover = new LinkPopover();
@@ -51,7 +58,9 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
         linkOnPaste: true
       }),
       Placeholder.configure({
-        placeholder: "Jot down anything…"
+        // Tiptap treats a doc of several empty paragraphs as empty, which would
+        // show the placeholder on the first line after pressing Enter.
+        placeholder: ({ editor: current }) => (isBlankDocument(current.state.doc) ? PLACEHOLDER : "")
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
