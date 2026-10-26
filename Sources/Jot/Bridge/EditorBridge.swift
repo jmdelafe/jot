@@ -82,6 +82,18 @@ final class EditorBridge: NSObject {
         call("showActions")
     }
 
+    func clipboardCopied() {
+        call("clipboardCopied")
+    }
+
+    func pasteRichText(noteID: UUID, html: String?, text: String) {
+        evaluate(function: "window.jot && window.jot.pasteRichText", withJSONArgument: .object([
+            "noteId": .string(noteID.uuidString),
+            "html": html.map(JSONValue.string) ?? .null,
+            "text": .string(text)
+        ]))
+    }
+
     private func call(_ name: String) {
         evaluateJavaScript("window.jot && window.jot.\(name) && window.jot.\(name)();")
     }

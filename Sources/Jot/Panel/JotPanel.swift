@@ -52,8 +52,16 @@ final class JotPanel: NSPanel {
             onEscape?()
             return
         }
+        if event.keyCode == kVK_ANSI_V,
+            event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                .intersection([.command, .shift, .option, .control]) == .command,
+            NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: self)
+        {
+            return
+        }
         super.keyDown(with: event)
     }
 }
 
 private let kVK_Escape: UInt16 = 0x35
+private let kVK_ANSI_V: UInt16 = 0x09

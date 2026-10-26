@@ -5,7 +5,9 @@ vi.mock("../src/bridge", () => ({
   bridge: {
     ready: vi.fn(),
     contentChanged: vi.fn(),
-    openLink: vi.fn()
+    openLink: vi.fn(),
+    copyText: vi.fn(),
+    copyRichText: vi.fn()
   }
 }));
 
@@ -123,6 +125,47 @@ describe("createEditor", () => {
     expect(jotEditor.serialize("markdown")).toBe("# Title\n\n**bold**");
     expect(jotEditor.serialize("html")).toBe("<h1>Title</h1><p><strong>bold</strong></p>");
     expect(jotEditor.serialize("plainText")).toBe("Title\nbold");
+    jotEditor.editor.destroy();
+  });
+
+  it("copies only selected text as plain text", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.editor.commands.setContent("<p><strong>plain</strong> text</p>");
+    jotEditor.editor.commands.setTextSelection({ from: 1, to: 6 });
+
+    expect(jotEditor.copySelection()).toBe(true);
+    expect(bridge.copyText).toHaveBeenCalledWith("plain");
+
+    jotEditor.editor.destroy();
+  });
+
+  it("does not copy when the selection is empty", () => {
+    const jotEditor = createEditor(mount);
+
+    expect(jotEditor.copySelection()).toBe(false);
+    expect(bridge.copyText).not.toHaveBeenCalled();
+
+    jotEditor.editor.destroy();
+  });
+
+  it("copies the selection with formatting and a plain-text fallback", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.editor.commands.setContent("<h1>Title</h1><p><strong>plain</strong> text</p>");
+    jotEditor.editor.commands.setTextSelection({ from: 8, to: 17 });
+
+    jotEditor.copyFormatted();
+
+    expect(bridge.copyRichText).toHaveBeenCalledWith("<p><strong>plain</strong> tex</p>", "plain tex");
+    jotEditor.editor.destroy();
+  });
+
+  it("copies the whole note with formatting when nothing is selected", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.editor.commands.setContent("<h1>Title</h1><p><strong>bold</strong></p>");
+
+    jotEditor.copyFormatted();
+
+    expect(bridge.copyRichText).toHaveBeenCalledWith("<h1>Title</h1><p><strong>bold</strong></p>", "Title\nbold");
     jotEditor.editor.destroy();
   });
 });

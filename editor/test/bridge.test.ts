@@ -30,6 +30,15 @@ describe("bridge", () => {
 
     bridge.preferredHeight(240);
     expect(postMessage).toHaveBeenCalledWith({ type: "preferredHeight", height: 240 });
+
+    bridge.copyText("plain");
+    expect(postMessage).toHaveBeenCalledWith({ type: "copyText", text: "plain" });
+    bridge.copyRichText("<p><strong>bold</strong></p>", "bold");
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "copyRichText", html: "<p><strong>bold</strong></p>", text: "bold"
+    });
+    bridge.pasteRichText("note-1");
+    expect(postMessage).toHaveBeenCalledWith({ type: "pasteRichText", noteId: "note-1" });
   });
 
   it("does not throw when no native bridge is present", () => {

@@ -137,8 +137,28 @@ final class PanelController: NSObject {
         case .requestNotes:
             Task { bridge.setNotes(await library.snapshot()) }
         case .copyText(let text):
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+            do {
+                try Clipboard.copyText(text)
+                bridge.clipboardCopied()
+            } catch {
+                NSAlert(error: error).runModal()
+            }
+        case .copyRichText(let html, let text):
+            do {
+                try Clipboard.copyRichText(html: html, text: text)
+                bridge.clipboardCopied()
+            } catch {
+                NSAlert(error: error).runModal()
+            }
+        case .pasteRichText(let noteID):
+            guard noteID == currentNoteID else { return }
+            do {
+                if let content = try Clipboard.readRichText() {
+                    bridge.pasteRichText(noteID: noteID, html: content.html, text: content.text)
+                }
+            } catch {
+                NSAlert(error: error).runModal()
+            }
         case .exportNote(let format, let text):
             export(text, as: format)
         case .preferredHeight(let height):
