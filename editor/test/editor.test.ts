@@ -85,6 +85,28 @@ describe("createEditor", () => {
     jotEditor.editor.destroy();
   });
 
+  it("shows the placeholder only while the note has no content", () => {
+    const jotEditor = createEditor(mount);
+    const { editor } = jotEditor;
+    const visiblePlaceholders = () =>
+      Array.from(mount.querySelectorAll("[data-placeholder]")).filter(
+        (el) => el.getAttribute("data-placeholder") !== ""
+      );
+
+    expect(visiblePlaceholders()).toHaveLength(1);
+    expect(visiblePlaceholders()[0].getAttribute("data-placeholder")).toBe("Jot down anything…");
+
+    editor.commands.enter();
+    editor.commands.enter();
+    editor.commands.setTextSelection(1);
+    expect(editor.state.doc.childCount).toBe(3);
+    expect(visiblePlaceholders()).toHaveLength(0);
+
+    editor.commands.setContent({ type: "doc", content: [{ type: "paragraph" }] });
+    expect(visiblePlaceholders()).toHaveLength(1);
+    editor.destroy();
+  });
+
   it("serializes notes as Markdown, HTML and plain text", () => {
     const jotEditor = createEditor(mount);
     jotEditor.loadNote({
