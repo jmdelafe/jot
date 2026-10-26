@@ -105,13 +105,22 @@ struct BridgeMessagesTests {
 
     @Test("decodes copy, export and sizing messages")
     func decodesUtilityMessages() throws {
+        let id = UUID()
         #expect(try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "copyText", "text": "hi"]) == .copyText("hi"))
+        #expect(try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "copyRichText", "html": "<p>hi</p>", "text": "hi"]) == .copyRichText(html: "<p>hi</p>", text: "hi"))
+        #expect(try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "pasteRichText", "noteId": id.uuidString]) == .pasteRichText(noteID: id))
         #expect(try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "exportNote", "format": "html", "text": "<p>x</p>"]) == .exportNote(.html, "<p>x</p>"))
         #expect(try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "preferredHeight", "height": 240]) == .preferredHeight(240))
     }
 
     @Test("rejects malformed library and utility messages")
     func rejectsMalformedCommands() {
+        #expect(throws: InboundBridgeMessage.ValidationError.invalidNoteID) {
+            _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "pasteRichText"])
+        }
+        #expect(throws: InboundBridgeMessage.ValidationError.invalidNoteID) {
+            _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "pasteRichText", "noteId": "invalid"])
+        }
         #expect(throws: InboundBridgeMessage.ValidationError.invalidNoteID) {
             _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "openNote"])
         }
@@ -120,6 +129,9 @@ struct BridgeMessagesTests {
         }
         #expect(throws: InboundBridgeMessage.ValidationError.invalidField("format")) {
             _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "exportNote", "format": "pdf", "text": ""])
+        }
+        #expect(throws: InboundBridgeMessage.ValidationError.invalidField("text")) {
+            _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "copyRichText", "html": "<p>hi</p>"])
         }
         #expect(throws: InboundBridgeMessage.ValidationError.invalidField("height")) {
             _ = try InboundBridgeMessage.decode(fromScriptMessageBody: ["type": "preferredHeight", "height": -1])

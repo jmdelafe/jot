@@ -31,6 +31,9 @@ public enum InboundBridgeMessage: Equatable, Sendable {
     case setPinned(UUID, Bool)
     case requestNotes
     case copyText(String)
+    /// Rich text for the pasteboard, with a plain-text fallback.
+    case copyRichText(html: String, text: String)
+    case pasteRichText(noteID: UUID)
     case exportNote(ExportFormat, String)
     /// The height the web content would like, in points.
     case preferredHeight(Double)
@@ -108,6 +111,10 @@ public enum InboundBridgeMessage: Equatable, Sendable {
             return .requestNotes
         case "copyText":
             return .copyText(try string("text"))
+        case "copyRichText":
+            return .copyRichText(html: try string("html"), text: try string("text"))
+        case "pasteRichText":
+            return .pasteRichText(noteID: try noteID("noteId"))
         case "exportNote":
             guard let format = ExportFormat(rawValue: try string("format")) else {
                 throw ValidationError.invalidField("format")

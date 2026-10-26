@@ -5,7 +5,7 @@ import { Palette, type PaletteItem, type PaletteMode } from "./palette";
 import { notesMode } from "./notesBrowser";
 import { installAutosize } from "./autosize";
 import { bridge } from "./bridge";
-import type { ExportFormat, NativeBridge, NotePayload, NotesPayload } from "./protocol";
+import type { ExportFormat, NativeBridge, NotePayload, NotesPayload, PastePayload } from "./protocol";
 
 const editorMount = document.getElementById("editor");
 const formatBarMount = document.getElementById("format-bar");
@@ -83,7 +83,10 @@ function deleteCurrent(): void {
 
 function copy(format: ExportFormat): void {
   bridge.copyText(jot.serialize(format));
-  showToast("Copied to Clipboard");
+}
+
+function copyFormatted(): void {
+  jot.copyFormatted();
 }
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
@@ -107,9 +110,13 @@ function actionItems(): PaletteItem[] {
       id: "format-bar", section: "Note", title: formatBarVisible ? "Hide Format Bar" : "Show Format Bar",
       shortcut: ["⇧", "⌘", "F"], run: () => setFormatBarVisible(!formatBarVisible)
     },
+    {
+      id: "copy-formatted", section: "Copy", title: "Copy with Formatting",
+      shortcut: ["⇧", "⌘", "C"], run: copyFormatted
+    },
     ...formats.map((format): PaletteItem => ({
       id: `copy-${format}`, section: "Copy", title: `Copy as ${FORMAT_LABELS[format]}`,
-      shortcut: format === "markdown" ? ["⇧", "⌘", "C"] : undefined, run: () => copy(format)
+      run: () => copy(format)
     })),
     ...formats.map((format): PaletteItem => ({
       id: `export-${format}`, section: "Export", title: `Export as ${FORMAT_LABELS[format]}…`,
@@ -157,6 +164,7 @@ function togglePalette(mode: "notes" | "actions"): void {
 window.addEventListener("keydown", event => {
   if (!event.metaKey || event.altKey || event.ctrlKey) return;
   const key = event.key.toLowerCase();
+  const inEditor = event.target instanceof Node && jot.editor.view.dom.contains(event.target);
   let handled = true;
   if (!event.shiftKey && key === "n") {
     palette.close(false);
@@ -167,12 +175,17 @@ window.addEventListener("keydown", event => {
     togglePalette("actions");
   } else if (!event.shiftKey && key === "w") {
     bridge.hide();
+  } else if (!event.shiftKey && key === "c" && !palette.isOpen && inEditor) {
+    handled = jot.copySelection();
   } else if (event.shiftKey && key === "p" && !palette.isOpen) {
     togglePinCurrent();
   } else if (event.shiftKey && key === "f" && !palette.isOpen) {
     setFormatBarVisible(formatBarMount.hidden);
-  } else if (event.shiftKey && key === "c" && !palette.isOpen) {
-    copy("markdown");
+  } else if (event.shiftKey && key === "c" && !palette.isOpen && inEditor) {
+    copyFormatted();
+  } else if (event.shiftKey && key === "v" && !palette.isOpen && inEditor) {
+    if (jot.noteId) bridge.pasteRichText(jot.noteId);
+    else handled = false;
   } else {
     handled = false;
   }
@@ -200,6 +213,15 @@ const nativeBridge: NativeBridge = {
   },
   showActions() {
     togglePalette("actions");
+  },
+  clipboardCopied() {
+    showToast("Copied to Clipboard");
+  },
+  pasteRichText(json: string) {
+    const content = JSON.parse(json) as PastePayload;
+    if (content.noteId === jot.noteId && !palette.isOpen) {
+      jot.pasteFormatted(content);
+    }
   }
 };
 

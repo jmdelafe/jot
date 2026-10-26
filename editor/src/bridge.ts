@@ -49,6 +49,12 @@ export const bridge = {
   copyText(text: string): void {
     post({ type: "copyText", text });
   },
+  copyRichText(html: string, text: string): void {
+    post({ type: "copyRichText", html, text });
+  },
+  pasteRichText(noteId: string): void {
+    post({ type: "pasteRichText", noteId });
+  },
   exportNote(format: ExportFormat, text: string): void {
     post({ type: "exportNote", format, text });
   },

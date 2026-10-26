@@ -31,6 +31,11 @@ describe("isOutboundMessage", () => {
     expect(isOutboundMessage({ type: "openNote" })).toBe(false);
     expect(isOutboundMessage({ type: "setPinned", id: "n", pinned: true })).toBe(true);
     expect(isOutboundMessage({ type: "setPinned", id: "n" })).toBe(false);
+    expect(isOutboundMessage({ type: "copyRichText", html: "<p>x</p>", text: "x" })).toBe(true);
+    expect(isOutboundMessage({ type: "copyRichText", html: "<p>x</p>" })).toBe(false);
+    expect(isOutboundMessage({ type: "pasteRichText", noteId: "n" })).toBe(true);
+    expect(isOutboundMessage({ type: "pasteRichText" })).toBe(false);
+    expect(isOutboundMessage({ type: "pasteRichText", noteId: 42 })).toBe(false);
     expect(isOutboundMessage({ type: "exportNote", format: "html", text: "" })).toBe(true);
     expect(isOutboundMessage({ type: "exportNote", format: "pdf", text: "" })).toBe(false);
     expect(isOutboundMessage({ type: "preferredHeight", height: 200 })).toBe(true);

@@ -29,6 +29,8 @@ export type OutboundMessage =
   | { type: "setPinned"; id: string; pinned: boolean }
   | { type: "requestNotes" }
   | { type: "copyText"; text: string }
+  | { type: "copyRichText"; html: string; text: string }
+  | { type: "pasteRichText"; noteId: string }
   | { type: "exportNote"; format: ExportFormat; text: string }
   | { type: "preferredHeight"; height: number }
   | { type: "hide" };
@@ -54,6 +56,15 @@ export interface NotePayload {
   document: JSONValue;
 }
 
+export interface ClipboardContent {
+  html: string | null;
+  text: string;
+}
+
+export interface PastePayload extends ClipboardContent {
+  noteId: string;
+}
+
 /** Functions native Swift calls on `window.jot`. JSON arrives as strings. */
 export interface NativeBridge {
   loadNote(json: string): void;
@@ -61,6 +72,8 @@ export interface NativeBridge {
   focusEditor(): void;
   showNotes(): void;
   showActions(): void;
+  clipboardCopied(): void;
+  pasteRichText(json: string): void;
 }
 
 const ID_TYPES = new Set(["openNote", "deleteNote", "restoreNote", "purgeNote"]);
@@ -85,6 +98,10 @@ export function isOutboundMessage(value: unknown): value is OutboundMessage {
       return typeof message.id === "string" && typeof message.pinned === "boolean";
     case "copyText":
       return typeof message.text === "string";
+    case "copyRichText":
+      return typeof message.html === "string" && typeof message.text === "string";
+    case "pasteRichText":
+      return typeof message.noteId === "string";
     case "exportNote":
       return typeof message.text === "string" && EXPORT_FORMATS.has(message.format as string);
     case "preferredHeight":

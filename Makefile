@@ -17,7 +17,7 @@ bootstrap:
 ## app resource.
 build:
 	cd editor && npm run build
-	swift build
+	swift build --product $(APP_NAME)
 
 ## Runs both halves' automated test suites.
 ##
@@ -38,7 +38,7 @@ test:
 ## build.
 check: test
 	cd editor && npm run build
-	swift build
+	swift build --product $(APP_NAME)
 
 ## Assembles an ad-hoc-signed build/Jot.app from a release build.
 bundle:

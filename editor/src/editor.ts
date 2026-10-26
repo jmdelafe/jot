@@ -1,6 +1,7 @@
 import { Editor, getHTMLFromFragment } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
+import { DOMParser } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -11,9 +12,10 @@ import { Markdown } from "tiptap-markdown";
 import { bridge } from "./bridge";
 import { createShortcutsExtension } from "./shortcuts";
 import { LinkPopover } from "./linkPopover";
-import type { ExportFormat, JSONValue, NotePayload } from "./protocol";
-import { LiveMarkdown, renderedDocument } from "./liveMarkdown";
+import type { ClipboardContent, ExportFormat, JSONValue, NotePayload } from "./protocol";
+import { LiveMarkdown, renderedDocument, renderedState, withRenderedMarkdown } from "./liveMarkdown";
 import { MarkdownHistory, markdownHistoryKey } from "./markdownHistory";
+import { PlainTextPaste, insertPlainText } from "./plainPaste";
 
 export interface JotEditor {
   editor: Editor;
@@ -23,6 +25,11 @@ export interface JotEditor {
   loadNote(note: NotePayload): void;
   /** The note serialized for copy/export, always from rendered rich text. */
   serialize(format: ExportFormat): string;
+  /** Copy the current selection as plain text, returning false when it is empty. */
+  copySelection(): boolean;
+  /** Copy the selection, or the whole note when nothing is selected, as rich text. */
+  copyFormatted(): void;
+  pasteFormatted(content: ClipboardContent): void;
   focus(): void;
 }
 
@@ -67,6 +74,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       Markdown,
       LiveMarkdown,
       MarkdownHistory,
+      PlainTextPaste,
       createShortcutsExtension(() => linkPopover.open(editorRef.current!))
     ],
     onUpdate({ editor: current }) {
@@ -108,6 +116,51 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
         case "plainText":
           return doc.textBetween(0, doc.content.size, "\n", "\n");
       }
+    },
+    copySelection() {
+      const state = renderedState(editor);
+      if (state.selection.empty) return false;
+      const { from, to } = state.selection;
+      const text = state.doc.textBetween(from, to, "\n", "\n");
+      if (!text) return false;
+      bridge.copyText(text);
+      return true;
+    },
+    copyFormatted() {
+      const state = renderedState(editor);
+      const { selection, doc } = state;
+      const content = selection.empty ? doc.content : selection.content().content;
+      const from = selection.empty ? 0 : selection.from;
+      const to = selection.empty ? doc.content.size : selection.to;
+      bridge.copyRichText(
+        getHTMLFromFragment(content, editor.schema),
+        doc.textBetween(from, to, "\n", "\n")
+      );
+    },
+    pasteFormatted({ html, text }) {
+      withRenderedMarkdown(editor, () => {
+        const { state } = editor;
+        if (!html) {
+          insertPlainText(editor, text);
+          return;
+        }
+        const container = document.createElement("div");
+        container.innerHTML = html;
+        const slice = DOMParser.fromSchema(editor.schema).parseSlice(container, {
+          preserveWhitespace: true,
+          context: state.selection.$from
+        });
+        if (slice.content.size === 0) {
+          insertPlainText(editor, text);
+          return;
+        }
+        if (state.selection.$from.parent.type.spec.code) {
+          insertPlainText(editor, text || slice.content.textBetween(0, slice.content.size, "\n", "\n"));
+          return;
+        }
+        editor.view.dispatch(state.tr.replaceSelection(slice)
+          .setMeta("preventAutolink", true).scrollIntoView());
+      });
     },
     focus() {
       editor.commands.focus("end");

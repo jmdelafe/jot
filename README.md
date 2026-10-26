@@ -24,6 +24,9 @@ make run
 editor and release app, creates an ad-hoc-signed `build/Jot.app`, and launches
 it.
 
+After code changes, quit Jot and run `make run` again. `make build` updates the
+debug build; it does not update or restart the packaged `build/Jot.app`.
+
 ### Using Jot
 
 - **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
@@ -36,11 +39,19 @@ it.
   list of notes, with pinned notes first. In the list, **⇧⌘P** pins and **⌃X**
   deletes. Deleted notes stay in *Recently Deleted* for 60 days, where you can
   restore them.
-- **Actions (⌘K):** pin, show or hide the format bar (**⇧⌘F**), copy as
-  Markdown (**⇧⌘C**), HTML, or plain text, export to a file, or delete.
+- **Actions (⌘K):** pin, show or hide the format bar (**⇧⌘F**), copy with
+  formatting (**⇧⌘C**) or as Markdown, HTML, or plain text, export to a file,
+  or delete.
 - **Formatting:** use Markdown-style shortcuts such as `## `, `- `, and `> `,
-  or the optional format bar. Placing the cursor in formatted text reveals its
-  editable Markdown; moving away renders it again. **⌘L** edits a link.
+  or the optional format bar. **⌘C** copies the selection as plain text;
+  **⇧⌘C** copies it with formatting (the whole note if nothing is selected).
+  Both show "Copied to Clipboard" after a successful copy. Formatted copy
+  includes HTML and RTF for rich-text apps, plus a plain-text fallback.
+  **⌘V** pastes plain text in the surrounding style; **⇧⌘V** preserves
+  supported formatting (headings, lists, links, and inline styles).
+  Pasting a URL over selected text with **⌘V** links it.
+  Placing the cursor in formatted text reveals its editable Markdown; moving
+  away renders it again. **⌘L** edits a link.
 - **Escape** closes the open palette or popover, otherwise it hides Jot.
 
 Notes are stored locally in the sandbox container, one JSON file per note plus
@@ -70,7 +81,8 @@ entitlement is used only by the export save panel.
 | `make bundle` | Create a release app at `build/Jot.app` without launching |
 | `make clean` | Remove Swift and app build output and editor caches |
 
-Swift tests run through `swift run JotTestRunner` rather than `swift test`.
+App builds target only `Jot`; the separate `JotTestRunner` is built and run by
+`make test`. Swift tests run through `swift run JotTestRunner` rather than `swift test`.
 This works around a Command Line Tools-only toolchain issue where the
 SwiftPM test driver builds the test bundle but does not execute its tests.
 If the default build system cannot load the Swift Testing macros, run
