@@ -2,20 +2,60 @@
 import Foundation
 import PackageDescription
 
-// On a Command Line Tools-only install (no full Xcode.app), `swiftc` does
-// not automatically search CLT's own Developer/Frameworks directory, so the
-// bundled Swift Testing framework can't be found by `swift test` without
-// help. Xcode-based toolchains don't need this, so it's added conditionally.
-let cltTestingFrameworksPath = "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
-let cltTestingInteropLibPath = "/Library/Developer/CommandLineTools/Library/Developer/usr/lib"
+// JotTestRunner is a plain executable rather than a test bundle (see the
+// note on that target), so SwiftPM doesn't give it the search and runtime
+// paths for the Swift Testing framework that test bundles get. Point it at
+// the Testing.framework that ships with the *active* developer directory:
+//   - Command Line Tools: <dir>/Library/Developer/Frameworks
+//   - Xcode: <dir>/Platforms/MacOSX.platform/Developer/Library/Frameworks
+//
+// It has to be the active toolchain's copy: the compiler's Swift Testing
+// macros must pair with the framework from the same toolchain, and a
+// Command Line Tools install sitting next to Xcode (as on GitHub-hosted
+// macOS runners) can ship a different, incompatible version.
+let cltDeveloperPath = "/Library/Developer/CommandLineTools"
+
+// `xcode-select -p` honors DEVELOPER_DIR, matching the toolchain that builds
+// this package. If it can't be determined, assume Command Line Tools.
+func activeDeveloperPath() -> String {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+    process.arguments = ["-p"]
+    let output = Pipe()
+    process.standardOutput = output
+    process.standardError = FileHandle.nullDevice
+    guard (try? process.run()) != nil else { return cltDeveloperPath }
+    let data = try? output.fileHandleForReading.readToEnd()
+    process.waitUntilExit()
+    guard process.terminationStatus == 0, let data else { return cltDeveloperPath }
+    let path = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    return path.isEmpty ? cltDeveloperPath : path
+}
+
+// Directories holding Testing.framework and the libraries it loads
+// (`_TestingInterop`), for the active toolchain. Nil if it has neither.
+func activeTestingPaths() -> (frameworks: String, libraries: String)? {
+    let developerPath = activeDeveloperPath()
+    let xcodePlatformPath = developerPath + "/Platforms/MacOSX.platform/Developer"
+    let candidates = [
+        (frameworks: developerPath + "/Library/Developer/Frameworks",
+         libraries: developerPath + "/Library/Developer/usr/lib"),
+        (frameworks: xcodePlatformPath + "/Library/Frameworks",
+         libraries: xcodePlatformPath + "/usr/lib"),
+    ]
+    return candidates.first {
+        FileManager.default.fileExists(atPath: $0.frameworks + "/Testing.framework")
+    }
+}
+
 var testTargetSwiftSettings: [SwiftSetting] = []
 var testTargetLinkerSettings: [LinkerSetting] = []
-if FileManager.default.fileExists(atPath: cltTestingFrameworksPath + "/Testing.framework") {
-    testTargetSwiftSettings.append(.unsafeFlags(["-F", cltTestingFrameworksPath]))
+if let testing = activeTestingPaths() {
+    testTargetSwiftSettings.append(.unsafeFlags(["-F", testing.frameworks]))
     testTargetLinkerSettings.append(.unsafeFlags([
-        "-F", cltTestingFrameworksPath, "-framework", "Testing",
-        "-Xlinker", "-rpath", "-Xlinker", cltTestingFrameworksPath,
-        "-Xlinker", "-rpath", "-Xlinker", cltTestingInteropLibPath
+        "-F", testing.frameworks, "-framework", "Testing",
+        "-Xlinker", "-rpath", "-Xlinker", testing.frameworks,
+        "-Xlinker", "-rpath", "-Xlinker", testing.libraries
     ]))
 }
 

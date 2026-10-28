@@ -88,6 +88,14 @@ SwiftPM test driver builds the test bundle but does not execute its tests.
 If the default build system cannot load the Swift Testing macros, run
 `swift run --build-system native JotTestRunner`.
 
+### Continuous integration
+
+GitHub Actions runs `.github/workflows/ci.yml` on every pull request and on
+pushes to `master`. The **Editor** job typechecks and tests the editor on
+Ubuntu. The **Swift** job builds the editor bundle, runs the Swift tests, and
+builds the app on macOS 26. Together they cover `make check`, so run that
+locally to reproduce a failure.
+
 ## Project layout
 
 - `Sources/Jot/`: AppKit/WebKit app, global hotkey, floating panel, and editor bridge.
@@ -95,3 +103,4 @@ If the default build system cannot load the Swift Testing macros, run
 - `Sources/JotTestRunner/`: Swift Testing suites and executable test runner.
 - `editor/`: TipTap/ProseMirror editor built with TypeScript and Vite.
 - `Packaging/`: App metadata and sandbox entitlements.
+- `.github/workflows/`: Continuous integration.
