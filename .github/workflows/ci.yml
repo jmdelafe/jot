@@ -47,6 +47,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+
   swift:
     name: Swift (tests + app build)
     # Package.swift targets macOS 26. macOS minutes are billed at 10x on
@@ -84,7 +87,7 @@ jobs:
       # Tests live in the JotTestRunner executable rather than a test target,
       # so `swift test` would run nothing (see the Makefile).
       - name: Run Swift tests
-        run: swift run JotTestRunner
+        run: make test-swift
 
-      - name: Build app
-        run: swift build
+      - name: Build and verify local app bundle
+        run: make bundle

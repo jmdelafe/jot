@@ -14,6 +14,7 @@ describe("clipboard paste", () => {
     mount = document.createElement("div");
     document.body.appendChild(mount);
     jot = createEditor(mount);
+    jot.loadNote({ id: "note-1", document: { type: "doc", content: [{ type: "paragraph" }] } });
   });
 
   afterEach(() => {

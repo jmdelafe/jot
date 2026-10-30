@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a reproducible problem with Jot.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use synthetic notes and redact personal data from logs and screenshots.
+        For sensitive security reports, use private vulnerability reporting when available.
+  - type: input
+    id: version
+    attributes:
+      label: Jot version or commit
+      description: For source builds, include the output of git rev-parse --short HEAD.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac architecture
+      placeholder: macOS 26, Apple silicon
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the installation method and a small example using non-sensitive data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include relevant error messages or redacted screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: toolchain
+    attributes:
+      label: Build environment
+      description: For build failures, include swift --version, xcode-select -p, node --version, and the failing command.

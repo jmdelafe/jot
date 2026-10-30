@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { createEditor } from "../src/editor";
+import type { JSONValue } from "../src/protocol";
 
 vi.mock("../src/bridge", () => ({
   bridge: {
@@ -32,6 +33,8 @@ describe("createEditor", () => {
       type: "doc",
       content: [{ type: "paragraph" }]
     });
+    expect(jotEditor.editor.isEditable).toBe(false);
+    expect(jotEditor.editor.view.dom.getAttribute("contenteditable")).toBe("false");
     await vi.waitFor(() => expect(bridge.ready).toHaveBeenCalledTimes(1));
     jotEditor.editor.destroy();
   });
@@ -70,9 +73,69 @@ describe("createEditor", () => {
     });
 
     expect(jotEditor.noteId).toBe("note-1");
+    expect(jotEditor.editor.isEditable).toBe(true);
     expect(jotEditor.editor.getText()).toBe("restored");
     expect(jotEditor.editor.state.selection.from).toBe("restored".length + 1);
     expect(bridge.contentChanged).not.toHaveBeenCalled();
+    jotEditor.editor.destroy();
+  });
+
+  it("preserves existing note structures through a Tiptap 3 load and save", () => {
+    const jotEditor = createEditor(mount);
+    const document: JSONValue = {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Title" }] },
+        { type: "paragraph", content: [
+          { type: "text", text: "Styled", marks: [
+            { type: "bold" }, { type: "italic" }, { type: "underline" }, { type: "strike" }
+          ] },
+          { type: "hardBreak" },
+          { type: "text", text: "Link", marks: [{ type: "link", attrs: { href: "https://example.com" } }] }
+        ] },
+        { type: "bulletList", content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Item" }] }] }
+        ] },
+        { type: "orderedList", attrs: { start: 3 }, content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Third" }] }] }
+        ] },
+        { type: "taskList", content: [
+          { type: "taskItem", attrs: { checked: true }, content: [
+            { type: "paragraph", content: [{ type: "text", text: "Done" }] }
+          ] }
+        ] },
+        { type: "blockquote", content: [
+          { type: "paragraph", content: [{ type: "text", text: "Quote" }] }
+        ] },
+        { type: "codeBlock", attrs: { language: "swift" }, content: [{ type: "text", text: "let a = 1" }] },
+        { type: "horizontalRule" }
+      ]
+    };
+    const expected = jotEditor.editor.schema.nodeFromJSON(document).toJSON();
+    jotEditor.loadNote({ id: "legacy-note", document });
+
+    expect(jotEditor.editor.getJSON()).toEqual(expected);
+    expect(jotEditor.serialize("markdown")).toContain("- [x] Done");
+    expect(jotEditor.serialize("markdown")).toContain("3. Third");
+    expect(jotEditor.serialize("html")).toContain("<u>");
+    expect(jotEditor.editor.state.doc.lastChild!.type.name).toBe("horizontalRule");
+    expect(bridge.contentChanged).not.toHaveBeenCalled();
+    expect(jotEditor.editor.commands.undo()).toBe(false);
+    jotEditor.editor.destroy();
+  });
+
+  it("keeps the previous note intact if a payload is not a document", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.loadNote({
+      id: "valid",
+      document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Keep" }] }] }
+    });
+    expect(() => jotEditor.loadNote({
+      id: "invalid",
+      document: { type: "paragraph" }
+    })).toThrow();
+    expect(jotEditor.noteId).toBe("valid");
+    expect(jotEditor.serialize("plainText")).toBe("Keep");
     jotEditor.editor.destroy();
   });
 

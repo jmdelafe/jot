@@ -3,8 +3,6 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { DOMParser } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -52,19 +50,21 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
   const editor = new Editor({
     element: mountEl,
     autofocus: false,
+    editable: false,
     content: EMPTY_DOCUMENT,
     extensions: [
       StarterKit.configure({
-        history: false,
-        heading: { levels: [1, 2, 3] }
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true
+        undoRedo: false,
+        trailingNode: false,
+        heading: { levels: [1, 2, 3] },
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true
+        }
       }),
       Placeholder.configure({
+        showOnlyWhenEditable: false,
         // Tiptap treats a doc of several empty paragraphs as empty, which would
         // show the placeholder on the first line after pressing Enter.
         placeholder: ({ editor: current }) => (isBlankDocument(current.state.doc) ? PLACEHOLDER : "")
@@ -99,9 +99,14 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       return noteId;
     },
     loadNote(note: NotePayload) {
+      const document = note.document;
+      if (typeof document !== "object" || document === null || Array.isArray(document) || document.type !== "doc") {
+        throw new Error("Stored note must be a document.");
+      }
       linkPopover.close(false);
+      editor.chain().setContent(document, { emitUpdate: false }).setMeta(markdownHistoryKey, "reset").run();
       noteId = note.id;
-      editor.chain().setContent(note.document as never, false).setMeta(markdownHistoryKey, "reset").run();
+      editor.setEditable(true, false);
       // Like a scratchpad, reopening a note continues where it ends.
       editor.commands.setTextSelection(TextSelection.atEnd(editor.state.doc).from);
     },
@@ -109,8 +114,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       const doc = renderedDocument(editor);
       switch (format) {
         case "markdown":
-          return (editor.storage.markdown as { serializer: { serialize(node: unknown): string } })
-            .serializer.serialize(doc);
+          return editor.storage.markdown.serializer.serialize(doc);
         case "html":
           return getHTMLFromFragment(doc.content, editor.schema);
         case "plainText":

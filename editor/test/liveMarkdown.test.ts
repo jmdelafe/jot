@@ -108,7 +108,7 @@ describe("active Markdown editing", () => {
   });
 
   it("retains edits through undo and redo", () => {
-    jot.editor.chain().setContent("<h3>Hello</h3>", false).setMeta("addToHistory", false).run();
+    jot.editor.chain().setContent("<h3>Hello</h3>", { emitUpdate: false }).setMeta("addToHistory", false).run();
     focus(6);
     jot.editor.commands.insertContent("!");
     expect(renderedDocument(jot.editor).firstChild!.textContent).toBe("Hello!");
