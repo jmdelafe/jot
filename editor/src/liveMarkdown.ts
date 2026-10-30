@@ -8,6 +8,12 @@ interface MarkdownRuntime {
   serializer: { serialize(document: ProseMirrorNode): string };
 }
 
+declare module "@tiptap/core" {
+  interface Storage {
+    markdown: MarkdownRuntime;
+  }
+}
+
 const sourceName = "markdownSource";
 const liveMarkdownKey = new PluginKey<boolean>("liveMarkdown");
 

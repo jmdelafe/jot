@@ -48,6 +48,7 @@ public actor NotesLibrary {
     private let indexURL: URL
     private let fileManager: FileManager
     private let now: @Sendable () -> Date
+    private let onSaveError: @Sendable (Error) -> Void
 
     private var index = Index()
     private var currentDocument: NoteDocument = .empty
@@ -60,14 +61,17 @@ public actor NotesLibrary {
     public init(
         directoryURL: URL? = nil,
         fileManager: FileManager = .default,
-        now: @escaping @Sendable () -> Date = { Date() }
+        now: @escaping @Sendable () -> Date = { Date() },
+        onSaveError: @escaping @Sendable (Error) -> Void = { error in
+            NSLog("Jot: could not save notes: \(error)")
+        }
     ) {
         self.fileManager = fileManager
         self.now = now
+        self.onSaveError = onSaveError
         rootDirectory = directoryURL ?? Self.defaultDirectory(fileManager: fileManager)
         notesDirectory = rootDirectory.appendingPathComponent("Notes", isDirectory: true)
         indexURL = notesDirectory.appendingPathComponent("index.json")
-        try? fileManager.createDirectory(at: notesDirectory, withIntermediateDirectories: true)
     }
 
     public static func defaultDirectory(fileManager: FileManager = .default) -> URL {
@@ -82,32 +86,38 @@ public actor NotesLibrary {
     /// versions on first run), purges notes deleted more than 60 days ago,
     /// and opens the last current note — or a fresh one.
     public func bootstrap() throws -> OpenedNote {
-        var preserved: URL?
-        if fileManager.fileExists(atPath: indexURL.path) {
-            do {
-                index = try JSONDecoder().decode(Index.self, from: Data(contentsOf: indexURL))
-            } catch {
-                preserved = preserve(indexURL, as: "index")
-                index = rebuildIndexFromNoteFiles()
+        try fileManager.createDirectory(at: notesDirectory, withIntermediateDirectories: true)
+        return try committingChanges {
+            var preserved: URL?
+            if fileManager.fileExists(atPath: indexURL.path) {
+                let data = try Data(contentsOf: indexURL)
+                do {
+                    index = try JSONDecoder().decode(Index.self, from: data)
+                } catch {
+                    preserved = try preserve(indexURL, as: "index")
+                    index = try rebuildIndexFromNoteFiles()
+                    indexDirty = true
+                }
+            } else {
+                index = try rebuildIndexFromNoteFiles()
+                if index.notes.isEmpty {
+                    preserved = try migrateLegacyNote()
+                }
                 indexDirty = true
             }
-        } else {
-            preserved = migrateLegacyNote()
-            indexDirty = true
-        }
-        purgeExpiredDeletedNotes()
+            try purgeExpiredDeletedNotes()
 
-        let candidate = index.currentID.flatMap { id in index.notes.first { $0.id == id && !$0.isDeleted } }
-            ?? activeNotesByRecency().first
-        let opened: OpenedNote
-        if let candidate {
-            opened = try activate(candidate.id)
-        } else {
-            opened = startNewNote()
+            let candidate = index.currentID.flatMap { id in index.notes.first { $0.id == id && !$0.isDeleted } }
+                ?? activeNotesByRecency().first
+            let opened: OpenedNote
+            if let candidate {
+                opened = try activate(candidate.id)
+            } else {
+                opened = startNewNote()
+            }
+            guard let preserved else { return opened }
+            return OpenedNote(summary: opened.summary, document: opened.document, preservedCorruptURL: preserved)
         }
-        try writeIndexIfNeeded()
-        guard let preserved else { return opened }
-        return OpenedNote(summary: opened.summary, document: opened.document, preservedCorruptURL: preserved)
     }
 
     // MARK: - Editing
@@ -130,23 +140,25 @@ public actor NotesLibrary {
         pendingSaveTask = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
-            await self?.flush()
+            do {
+                try await self?.flush()
+            } catch {
+                self?.onSaveError(error)
+            }
         }
         return index.notes[position]
     }
 
     /// Writes any pending edits immediately. Call when hiding the panel,
     /// switching notes, or terminating.
-    public func flush() {
+    public func flush() throws {
         pendingSaveTask?.cancel()
         pendingSaveTask = nil
         if documentDirty, let id = index.currentID {
-            if let data = try? currentDocument.serialized() {
-                try? data.write(to: noteURL(id), options: .atomic)
-            }
+            try currentDocument.serialized().write(to: noteURL(id), options: .atomic)
             documentDirty = false
         }
-        try? writeIndexIfNeeded()
+        try writeIndexIfNeeded()
     }
 
     // MARK: - Library operations
@@ -165,25 +177,26 @@ public actor NotesLibrary {
         guard let summary = index.notes.first(where: { $0.id == id }), !summary.isDeleted else {
             throw NoteStoreError.noteNotFound
         }
-        leaveCurrentNote()
-        let opened = try activate(summary.id)
-        try writeIndexIfNeeded()
-        return opened
+        try flush()
+        return try committingChanges {
+            try leaveCurrentNote()
+            return try activate(summary.id)
+        }
     }
 
     /// Opens a new empty note. If the current note is already empty it is
     /// reused rather than piling up blank notes.
-    public func createNote() -> OpenedNote {
-        if let id = index.currentID, let position = position(of: id), index.notes[position].isEmpty {
-            index.notes[position].openedAt = now()
-            indexDirty = true
-            try? writeIndexIfNeeded()
-            return OpenedNote(summary: index.notes[position], document: currentDocument, preservedCorruptURL: nil)
+    public func createNote() throws -> OpenedNote {
+        try flush()
+        return try committingChanges {
+            if let id = index.currentID, let position = position(of: id), index.notes[position].isEmpty {
+                index.notes[position].openedAt = now()
+                indexDirty = true
+                return OpenedNote(summary: index.notes[position], document: currentDocument, preservedCorruptURL: nil)
+            }
+            try leaveCurrentNote()
+            return startNewNote()
         }
-        leaveCurrentNote()
-        let opened = startNewNote()
-        try? writeIndexIfNeeded()
-        return opened
     }
 
     /// Moves a note to Recently Deleted (or removes it outright if it has no
@@ -193,42 +206,46 @@ public actor NotesLibrary {
     public func delete(_ id: UUID) throws -> OpenedNote? {
         guard let position = position(of: id) else { throw NoteStoreError.noteNotFound }
         let wasCurrent = id == index.currentID
-        if wasCurrent {
-            flush()
-        }
-        if index.notes[position].isEmpty {
-            removeNote(at: position)
-        } else {
-            index.notes[position].deletedAt = now()
-            index.notes[position].isPinned = false
-        }
-        indexDirty = true
-        var replacement: OpenedNote?
-        if wasCurrent {
-            index.currentID = nil
-            if let next = activeNotesByRecency().first {
-                replacement = try activate(next.id)
+        try flush()
+        return try committingChanges {
+            if index.notes[position].isEmpty {
+                try removeNote(at: position)
             } else {
-                replacement = startNewNote()
+                index.notes[position].deletedAt = now()
+                index.notes[position].isPinned = false
             }
+            indexDirty = true
+            if wasCurrent {
+                index.currentID = nil
+                if let next = activeNotesByRecency().first {
+                    return try activate(next.id)
+                }
+                return startNewNote()
+            }
+            return nil
         }
-        try writeIndexIfNeeded()
-        return replacement
     }
 
     /// Restores a recently deleted note and opens it.
     public func restore(_ id: UUID) throws -> OpenedNote {
         guard let position = position(of: id) else { throw NoteStoreError.noteNotFound }
-        index.notes[position].deletedAt = nil
-        indexDirty = true
-        return try open(id)
+        try flush()
+        return try committingChanges {
+            index.notes[position].deletedAt = nil
+            indexDirty = true
+            if id != index.currentID {
+                try leaveCurrentNote()
+            }
+            return try activate(id)
+        }
     }
 
     /// Permanently removes a note (used for "Delete Permanently").
     public func purge(_ id: UUID) throws {
         guard let position = position(of: id) else { throw NoteStoreError.noteNotFound }
         guard id != index.currentID else { return }
-        removeNote(at: position)
+        try flush()
+        try removeNote(at: position)
         indexDirty = true
         try writeIndexIfNeeded()
     }
@@ -237,9 +254,11 @@ public actor NotesLibrary {
         guard let position = position(of: id), !index.notes[position].isDeleted else {
             throw NoteStoreError.noteNotFound
         }
-        index.notes[position].isPinned = pinned
-        indexDirty = true
-        try writeIndexIfNeeded()
+        try flush()
+        try committingChanges {
+            index.notes[position].isPinned = pinned
+            indexDirty = true
+        }
     }
 
     // MARK: - Internals
@@ -261,13 +280,11 @@ public actor NotesLibrary {
             }
     }
 
-    /// Flushes the current note and discards it if it is empty so abandoned
-    /// blank notes never clutter the browser.
-    private func leaveCurrentNote() {
-        flush()
+    /// Called only after flushing successfully.
+    private func leaveCurrentNote() throws {
         if let id = index.currentID, let position = position(of: id),
            index.notes[position].isEmpty, !index.notes[position].isPinned {
-            removeNote(at: position)
+            try removeNote(at: position)
             indexDirty = true
         }
         index.currentID = nil
@@ -279,11 +296,14 @@ public actor NotesLibrary {
         var document = NoteDocument.empty
         let url = noteURL(id)
         if fileManager.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
             do {
-                document = try NoteDocument.deserialize(Data(contentsOf: url))
+                document = try NoteDocument.deserialize(data)
             } catch {
-                preserved = preserve(url, as: id.uuidString)
+                preserved = try preserve(url, as: id.uuidString)
             }
+        } else if !index.notes[position].isEmpty {
+            throw CocoaError(.fileReadNoSuchFile, userInfo: [NSFilePathErrorKey: url.path])
         }
         index.notes[position].openedAt = now()
         index.currentID = id
@@ -303,18 +323,21 @@ public actor NotesLibrary {
         return OpenedNote(summary: summary, document: .empty, preservedCorruptURL: nil)
     }
 
-    private func removeNote(at position: Int) {
+    private func removeNote(at position: Int) throws {
         let id = index.notes[position].id
+        let url = noteURL(id)
+        if fileManager.fileExists(atPath: url.path) {
+            try fileManager.removeItem(at: url)
+        }
         index.notes.remove(at: position)
-        try? fileManager.removeItem(at: noteURL(id))
     }
 
-    private func purgeExpiredDeletedNotes() {
+    private func purgeExpiredDeletedNotes() throws {
         let cutoff = now().addingTimeInterval(-Self.deletedRetention)
         let expired = index.notes.filter { ($0.deletedAt ?? .distantFuture) < cutoff }.map(\.id)
         for id in expired {
             if let position = position(of: id) {
-                removeNote(at: position)
+                try removeNote(at: position)
                 indexDirty = true
             }
         }
@@ -328,38 +351,72 @@ public actor NotesLibrary {
         indexDirty = false
     }
 
+    /// A failed index write must not switch the native current note while
+    /// the editor is still displaying the previous one.
+    private func committingChanges<T>(_ change: () throws -> T) throws -> T {
+        let previousIndex = index
+        let previousDocument = currentDocument
+        let previousIndexDirty = indexDirty
+        let previousDocumentDirty = documentDirty
+        do {
+            let result = try change()
+            try writeIndexIfNeeded()
+            return result
+        } catch {
+            index = previousIndex
+            currentDocument = previousDocument
+            indexDirty = previousIndexDirty
+            documentDirty = previousDocumentDirty
+            throw error
+        }
+    }
+
     /// Imports `Jot/note.json` from the single-note version of Jot. The
     /// original is kept as `note.migrated.json`.
-    private func migrateLegacyNote() -> URL? {
+    private func migrateLegacyNote() throws -> URL? {
         let legacyURL = rootDirectory.appendingPathComponent("note.json")
         guard fileManager.fileExists(atPath: legacyURL.path) else { return nil }
-        guard let data = try? Data(contentsOf: legacyURL),
-              let document = try? NoteDocument.deserialize(data) else {
-            return preserve(legacyURL, as: "note")
+        let data = try Data(contentsOf: legacyURL)
+        let document: NoteDocument
+        do {
+            document = try NoteDocument.deserialize(data)
+        } catch {
+            return try preserve(legacyURL, as: "note")
         }
         var summary = NoteSummary(now: now())
         summary.apply(document)
-        if !summary.isEmpty, (try? document.serialized().write(to: noteURL(summary.id), options: .atomic)) != nil {
+        if !summary.isEmpty {
+            try document.serialized().write(to: noteURL(summary.id), options: .atomic)
             index.notes.append(summary)
             index.currentID = summary.id
+            indexDirty = true
+            try writeIndexIfNeeded()
         }
-        let backupURL = rootDirectory.appendingPathComponent("note.migrated.json")
-        try? fileManager.removeItem(at: backupURL)
-        try? fileManager.moveItem(at: legacyURL, to: backupURL)
+        var backupURL = rootDirectory.appendingPathComponent("note.migrated.json")
+        if fileManager.fileExists(atPath: backupURL.path) {
+            backupURL = rootDirectory.appendingPathComponent("note.migrated-\(UUID().uuidString).json")
+        }
+        try fileManager.moveItem(at: legacyURL, to: backupURL)
         return nil
     }
 
-    private func rebuildIndexFromNoteFiles() -> Index {
+    private func rebuildIndexFromNoteFiles() throws -> Index {
         var rebuilt = Index()
-        let files = (try? fileManager.contentsOfDirectory(
+        let files = try fileManager.contentsOfDirectory(
             at: notesDirectory,
             includingPropertiesForKeys: [.contentModificationDateKey]
-        )) ?? []
+        )
         for url in files where url.pathExtension == "json" {
-            guard let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent),
-                  let data = try? Data(contentsOf: url),
-                  let document = try? NoteDocument.deserialize(data) else { continue }
-            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+            guard let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent) else { continue }
+            let data = try Data(contentsOf: url)
+            let document: NoteDocument
+            do {
+                document = try NoteDocument.deserialize(data)
+            } catch {
+                NSLog("Jot: leaving unreadable note at \(url.path): \(error)")
+                continue
+            }
+            let modified = try url.resourceValues(forKeys: [.contentModificationDateKey])
                 .contentModificationDate ?? now()
             var summary = NoteSummary(id: id, now: modified)
             summary.apply(document)
@@ -368,11 +425,11 @@ public actor NotesLibrary {
         return rebuilt
     }
 
-    private func preserve(_ url: URL, as name: String) -> URL {
+    private func preserve(_ url: URL, as name: String) throws -> URL {
         let timestamp = Int(now().timeIntervalSince1970)
         let preservedURL = url.deletingLastPathComponent()
-            .appendingPathComponent("\(name).corrupt-\(timestamp).json")
-        try? fileManager.moveItem(at: url, to: preservedURL)
+            .appendingPathComponent("\(name).corrupt-\(timestamp)-\(UUID().uuidString).json")
+        try fileManager.copyItem(at: url, to: preservedURL)
         return preservedURL
     }
 }

@@ -9,15 +9,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
     private var panelController: PanelController?
     private var hotkeyManager: HotkeyManager?
-    private let library = NotesLibrary()
+    private var isPresentingPersistenceError = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
+        let library = NotesLibrary(onSaveError: { [weak self] error in
+            Task { @MainActor in
+                self?.presentPersistenceError(error)
+            }
+        })
         let panelController = PanelController(library: library)
         self.panelController = panelController
         panelController.onCorruptedNote = { [weak self] preservedURL in
             self?.presentCorruptedNoteAlert(preservedURL: preservedURL)
+        }
+        panelController.onPersistenceError = { [weak self] error in
+            self?.presentPersistenceError(error)
         }
         panelController.onInvalidBridgeMessage = { error in
             // Surfacing every malformed bridge message as a user-facing alert
@@ -48,16 +56,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
-    /// Flush any pending debounced save before the app actually exits so a
-    /// force-quit or system shutdown immediately after typing can't lose the
-    /// last few hundred milliseconds of edits.
+    /// Cancel an ordinary quit if pending edits cannot be saved.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let panelController else { return .terminateNow }
         Task { @MainActor in
-            await panelController.flushSynchronously()
-            NSApp.reply(toApplicationShouldTerminate: true)
+            do {
+                try await panelController.flushSynchronously()
+                NSApp.reply(toApplicationShouldTerminate: true)
+            } catch {
+                NSApp.reply(toApplicationShouldTerminate: false)
+                presentPersistenceError(error)
+            }
         }
         return .terminateLater
+    }
+
+    private func presentPersistenceError(_ error: Error) {
+        NSLog("Jot: notes storage error: \(error)")
+        guard !isPresentingPersistenceError else { return }
+        isPresentingPersistenceError = true
+        defer { isPresentingPersistenceError = false }
+        panelController?.show()
+        let alert = NSAlert()
+        alert.messageText = "Couldn't Access Saved Notes"
+        alert.informativeText = "Check available disk space and folder permissions, then retry. "
+            + "Pending edits are still in memory. Keep Jot open until saving succeeds; "
+            + "you can also copy or export the current note for safekeeping.\n\n\(error.localizedDescription)"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Retry")
+        alert.addButton(withTitle: "Keep Jot Open")
+        if alert.runModal() == .alertFirstButtonReturn {
+            Task { @MainActor in
+                do {
+                    try await panelController?.retryPersistence()
+                } catch {
+                    presentPersistenceError(error)
+                }
+            }
+        }
     }
 
     private func presentCorruptedNoteAlert(preservedURL: URL) {

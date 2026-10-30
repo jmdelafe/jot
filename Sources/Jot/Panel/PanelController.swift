@@ -21,6 +21,7 @@ final class PanelController: NSObject {
 
     /// Presented when a stored note or index fails validation on load.
     var onCorruptedNote: ((_ preservedURL: URL) -> Void)?
+    var onPersistenceError: ((Error) -> Void)?
     var onInvalidBridgeMessage: ((Error) -> Void)?
 
     /// Centered, Raycast-style note title. The native title is hidden because
@@ -72,7 +73,13 @@ final class PanelController: NSObject {
 
     func hide() {
         panel.orderOut(nil)
-        Task { await library.flush() }
+        Task {
+            do {
+                try await library.flush()
+            } catch {
+                onPersistenceError?(error)
+            }
+        }
     }
 
     /// Opens a fresh note (reusing the current one if it is still empty).
@@ -83,9 +90,12 @@ final class PanelController: NSObject {
             return
         }
         Task {
-            let opened = await library.createNote()
-            present(opened)
-            bridge.focusEditor()
+            do {
+                present(try await library.createNote())
+                bridge.focusEditor()
+            } catch {
+                onPersistenceError?(error)
+            }
         }
     }
 
@@ -100,8 +110,16 @@ final class PanelController: NSObject {
     }
 
     /// Writes any pending edits immediately. Call before app termination.
-    func flushSynchronously() async {
-        await library.flush()
+    func flushSynchronously() async throws {
+        try await library.flush()
+    }
+
+    func retryPersistence() async throws {
+        if isEditorReady {
+            try await library.flush()
+        } else {
+            try await loadLibrary()
+        }
     }
 
     // MARK: - Bridge
@@ -178,32 +196,36 @@ final class PanelController: NSObject {
                     present(opened)
                 }
             } catch {
-                onInvalidBridgeMessage?(error)
+                onPersistenceError?(error)
             }
             bridge.setNotes(await library.snapshot())
         }
     }
 
     private func handleEditorReady() {
-        isEditorReady = true
         Task {
             do {
-                present(try await library.bootstrap())
+                try await loadLibrary()
             } catch {
-                onInvalidBridgeMessage?(error)
+                onPersistenceError?(error)
             }
-            if pendingNewNoteAfterReady {
-                pendingNewNoteAfterReady = false
-                present(await library.createNote())
-            }
-            if pendingShowNotesAfterReady {
-                pendingShowNotesAfterReady = false
-                bridge.showNotes()
-            } else if pendingFocusAfterReady {
-                bridge.focusEditor()
-            }
-            pendingFocusAfterReady = false
         }
+    }
+
+    private func loadLibrary() async throws {
+        present(try await library.bootstrap())
+        isEditorReady = true
+        if pendingNewNoteAfterReady {
+            pendingNewNoteAfterReady = false
+            present(try await library.createNote())
+        }
+        if pendingShowNotesAfterReady {
+            pendingShowNotesAfterReady = false
+            bridge.showNotes()
+        } else if pendingFocusAfterReady {
+            bridge.focusEditor()
+        }
+        pendingFocusAfterReady = false
     }
 
     private func present(_ opened: OpenedNote) {
