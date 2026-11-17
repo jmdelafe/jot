@@ -13,7 +13,7 @@ After cloning, or whenever `editor/package-lock.json` changes:
 make bootstrap
 make check
 make bundle
-cd editor && npm audit --audit-level=moderate
+cd editor && npm run audit
 ```
 
 `make check` runs both test suites and builds the app. `make bundle` also checks
@@ -31,6 +31,15 @@ both `editor/package.json` and `editor/package-lock.json`. Do not commit generat
 editor HTML, app bundles, signing credentials, or personal notes. Do not use
 `npm audit fix --force` without reviewing breaking changes and running the
 editor tests.
+
+`npm run audit` blocks moderate-or-higher dependency advisories, including
+development dependencies. The only temporary exception is
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in
+picomatch's build/test tooling, which has no patched release as of 2026-11-17.
+Do not pass untrusted glob patterns to those tools. The exception in
+`editor/audit-ci.json` expires on **2026-12-01 at 00:00 UTC**; remove it when
+an upstream fix is available. Other advisories and audit service failures
+remain blocking.
 
 ## Reporting problems
 

@@ -13,9 +13,10 @@ on:
 permissions:
   contents: read
 
+# Keep this group distinct from Release when CI is called as a reusable workflow.
 # Supersede stale runs on a PR; never cancel runs on master.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -50,7 +51,7 @@ jobs:
         run: npm test
 
       - name: Audit dependencies
-        run: npm audit --audit-level=moderate
+        run: npm run audit
 
       - name: Test release scripts
         run: make test-release

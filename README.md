@@ -5,7 +5,7 @@ A fast, local, Raycast Notes-style scratchpad for the macOS menu bar. Press
 stay available across app launches. No Dock icon, account, or internet
 connection required.
 
-The first release is planned as **source-only**, under the [MIT license](LICENSE).
+The first alpha release is **source-only**, under the [MIT license](LICENSE).
 There is no official signed or notarized app download yet.
 
 ## Install from source
@@ -144,7 +144,9 @@ pushes to `master`. The **Editor** job typechecks and tests the editor on
 Ubuntu and audits the locked dependency tree. The **Swift** job builds the
 editor bundle, runs `make test-swift`, and builds and verifies the local app
 bundle on macOS 26. Run `make check`, `make bundle`, and
-`cd editor && npm audit --audit-level=moderate` locally before a release.
+`cd editor && npm run audit` locally before a release. The
+[contribution guide](CONTRIBUTING.md) documents the temporary, expiring
+exception for one build/test dependency advisory.
 CI does not publish artifacts or change repository visibility.
 
 ### Releases
