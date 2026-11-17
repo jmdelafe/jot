@@ -114,6 +114,7 @@ entitlement is used only by the export save panel.
 | `make test-swift` | Run only the Swift test runner |
 | `make check` | Run tests and build both components |
 | `make bundle` | Create and verify a local release build at `build/Jot.app` without launching |
+| `make release VERSION=…` | Tag `origin/master` and trigger a GitHub release (see below) |
 | `make clean` | Remove Swift and app build output and editor caches |
 
 App builds target only `Jot`; the separate `JotTestRunner` is built and run by
@@ -146,6 +147,26 @@ bundle on macOS 26. Run `make check`, `make bundle`, and
 `cd editor && npm audit --audit-level=moderate` locally before a release.
 CI does not publish artifacts or change repository visibility.
 
+### Releases
+
+Versions follow [Semantic Versioning 2.0.0](https://semver.org). Release tags
+are `v` + the version, for example `v0.1.0-alpha.1`, `v0.1.0-rc.1`, or
+`v0.1.0`. The tag's `MAJOR.MINOR.PATCH` must equal `CFBundleShortVersionString`
+in `Packaging/Info.plist` (macOS only allows numeric app versions there, so
+pre-release suffixes live only in the tag).
+
+To release, bump the version in `Info.plist` if needed and merge to `master`,
+then from an up-to-date, clean `master` checkout run:
+
+```sh
+make release VERSION=0.1.0-alpha.1
+```
+
+This validates the version and pushes the tag. `.github/workflows/release.yml`
+then reruns CI and publishes a source-only GitHub release with
+`.github/release-notes.md` and generated changelog notes. Tags with a
+pre-release suffix are marked as pre-releases.
+
 ## Project layout
 
 - `Sources/Jot/`: AppKit/WebKit app, global hotkey, floating panel, and editor bridge.
@@ -153,7 +174,8 @@ CI does not publish artifacts or change repository visibility.
 - `Sources/JotTestRunner/`: Swift Testing suites and executable test runner.
 - `editor/`: TipTap/ProseMirror editor built with TypeScript and Vite.
 - `Packaging/`: App metadata and sandbox entitlements.
-- `.github/workflows/`: Continuous integration.
+- `.github/workflows/`: Continuous integration and releases.
+- `scripts/`: Release tag validation and tagging scripts.
 
 ## License
 

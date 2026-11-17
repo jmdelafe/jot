@@ -65,9 +65,10 @@ editor package has no independent release version.
 - Back up existing notes before upgrading. Include supported OS/toolchain
   versions, installation steps, known limitations, and data recovery guidance
   in the release notes.
-- Only after approval, tag the chosen commit with the app version (for example
-  `v0.1.0`) and publish a source release. Do not attach the ad-hoc-signed
-  `build/Jot.app` or describe it as a notarized download.
+- Only after approval, run `make release VERSION=<version>` from `master` (for
+  example `0.1.0-alpha.1`; see *Releases* in the README). The Release workflow
+  publishes a source release. Do not attach the ad-hoc-signed `build/Jot.app`
+  or describe it as a notarized download.
 
 For a future binary release, use Developer ID signing with hardened runtime,
 notarize and staple the artifact, include all bundled third-party license

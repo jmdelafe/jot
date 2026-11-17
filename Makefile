@@ -2,7 +2,7 @@ APP_NAME := Jot
 BUILD_DIR := build
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 
-.PHONY: bootstrap editor build test test-editor test-swift check bundle run clean
+.PHONY: bootstrap editor build test test-editor test-swift test-release check bundle run release clean
 
 ## Installs the exact editor dependencies recorded in the lockfile.
 bootstrap:
@@ -15,7 +15,7 @@ editor:
 build: editor
 	swift build --product $(APP_NAME)
 
-test: test-editor test-swift
+test: test-editor test-swift test-release
 
 test-editor:
 	cd editor && npm run typecheck && npm test
@@ -24,6 +24,9 @@ test-editor:
 ## Keep its cache separate from the app's default build backend.
 test-swift:
 	swift run --build-system native --scratch-path .build/testing JotTestRunner
+
+test-release:
+	scripts/check-release-tag-test.sh
 
 check: test build
 
@@ -54,6 +57,12 @@ bundle: editor
 ## Bundles (if needed) and launches Jot.
 run: bundle
 	open "$(APP_BUNDLE)"
+
+## Tags origin/master as v$(VERSION) (SemVer) and pushes it to trigger the
+## Release workflow, e.g. `make release VERSION=0.1.0-alpha.1`.
+release:
+	@test -n "$(VERSION)" || { echo "usage: make release VERSION=0.1.0-alpha.1" >&2; exit 1; }
+	scripts/release.sh "$(VERSION)"
 
 clean:
 	rm -rf .build "$(BUILD_DIR)" Sources/Jot/Resources/editor

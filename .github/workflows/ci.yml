@@ -7,6 +7,8 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  # Lets the Release workflow gate publishing on these checks.
+  workflow_call:
 
 permissions:
   contents: read
@@ -49,6 +51,10 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit --audit-level=moderate
+
+      - name: Test release scripts
+        run: make test-release
+        working-directory: .
 
   swift:
     name: Swift (tests + app build)
