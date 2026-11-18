@@ -14,38 +14,15 @@ if (!editorMount || !formatBarMount) {
   throw new Error("Jot editor host is missing required DOM mount points.");
 }
 
-const FORMAT_BAR_KEY = "jot.formatBarVisible";
 const jot = createEditor(editorMount);
 let notes: NotesPayload = { currentId: null, notes: [] };
 
 const focusEditor = () => jot.focus();
 const palette = new Palette(() => autosize.schedule());
-const autosize = installAutosize(editorMount, formatBarMount, () => palette.isOpen);
+const autosize = installAutosize(editorMount, () => palette.isOpen);
 jot.editor.on("update", () => autosize.schedule());
 
-function readFormatBarPreference(): boolean {
-  try {
-    return localStorage.getItem(FORMAT_BAR_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function setFormatBarVisible(visible: boolean): void {
-  formatBarMount!.hidden = !visible;
-  try {
-    localStorage.setItem(FORMAT_BAR_KEY, String(visible));
-  } catch {
-    // Preference persistence is best-effort.
-  }
-  autosize.schedule();
-}
-
-mountFormatBar(formatBarMount, jot.editor, jot.linkPopover, () => {
-  setFormatBarVisible(false);
-  focusEditor();
-});
-setFormatBarVisible(readFormatBarPreference());
+mountFormatBar(formatBarMount, jot.editor, jot.linkPopover);
 
 const toast = document.createElement("div");
 toast.className = "jot-toast";
@@ -97,7 +74,6 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
 
 function actionItems(): PaletteItem[] {
   const pinned = currentNote()?.pinned ?? false;
-  const formatBarVisible = !formatBarMount!.hidden;
   const formats = Object.keys(FORMAT_LABELS) as ExportFormat[];
   return [
     { id: "new", section: "Note", title: "New Note", shortcut: ["⌘", "N"], run: () => bridge.newNote() },
@@ -105,10 +81,6 @@ function actionItems(): PaletteItem[] {
     {
       id: "pin", section: "Note", title: pinned ? "Unpin Note" : "Pin Note",
       shortcut: ["⇧", "⌘", "P"], run: togglePinCurrent
-    },
-    {
-      id: "format-bar", section: "Note", title: formatBarVisible ? "Hide Format Bar" : "Show Format Bar",
-      shortcut: ["⇧", "⌘", "F"], run: () => setFormatBarVisible(!formatBarVisible)
     },
     {
       id: "copy-formatted", section: "Copy", title: "Copy with Formatting",
@@ -179,8 +151,6 @@ window.addEventListener("keydown", event => {
     handled = jot.copySelection();
   } else if (event.shiftKey && key === "p" && !palette.isOpen) {
     togglePinCurrent();
-  } else if (event.shiftKey && key === "f" && !palette.isOpen) {
-    setFormatBarVisible(formatBarMount.hidden);
   } else if (event.shiftKey && key === "c" && !palette.isOpen && inEditor) {
     copyFormatted();
   } else if (event.shiftKey && key === "v" && !palette.isOpen && inEditor) {

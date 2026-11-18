@@ -18,6 +18,7 @@ final class JotPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
+        appearance = NSAppearance(named: .darkAqua)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         titlebarAppearsTransparent = true
@@ -30,6 +31,7 @@ final class JotPanel: NSPanel {
         minSize = NSSize(width: 240, height: 420)
         hidesOnDeactivate = false
         standardWindowButton(.zoomButton)?.isHidden = true
+        standardWindowButton(.miniaturizeButton)?.isHidden = true
         let restored = setFrameUsingName("JotPanel")
         setFrameAutosaveName("JotPanel")
         if !restored {
@@ -38,6 +40,39 @@ final class JotPanel: NSPanel {
             // Frames saved before the minimum was raised; keep the top edge fixed.
             let size = NSSize(width: max(frame.width, minSize.width), height: max(frame.height, minSize.height))
             setFrame(NSRect(x: frame.minX, y: frame.maxY - size.height, width: size.width, height: size.height), display: false)
+        }
+    }
+
+    private var hoverRevealedViews: [NSView] = []
+
+    /// Keeps the window quiet at rest: the traffic lights and `extraViews`
+    /// fade in only while the pointer is over the panel.
+    func revealOnHover(_ extraViews: [NSView]) {
+        hoverRevealedViews = [standardWindowButton(.closeButton)?.superview].compactMap { $0 } + extraViews
+        contentView?.addTrackingArea(
+            NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        )
+        syncChromeWithPointer(animated: false)
+    }
+
+    /// The pointer may already be over the panel when it is shown, which
+    /// produces no enter event.
+    func syncChromeWithPointer(animated: Bool = true) {
+        setChromeVisible(frame.contains(NSEvent.mouseLocation), animated: animated)
+    }
+
+    override func mouseEntered(with event: NSEvent) { setChromeVisible(true, animated: true) }
+    override func mouseExited(with event: NSEvent) { setChromeVisible(false, animated: true) }
+
+    private func setChromeVisible(_ visible: Bool, animated: Bool) {
+        let alpha: CGFloat = visible ? 1 : 0
+        guard animated else {
+            hoverRevealedViews.forEach { $0.alphaValue = alpha }
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            hoverRevealedViews.forEach { $0.animator().alphaValue = alpha }
         }
     }
 

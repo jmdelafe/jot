@@ -44,12 +44,46 @@ const GROUPS: ButtonSpec[][] = [
   ]
 ];
 
-export function mountFormatBar(
-  container: HTMLElement,
-  editor: Editor,
-  linkPopover: LinkPopover,
-  onClose?: () => void
-): void {
+interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+const PILL_GAP = 8;
+
+/** Centres the pill over the selection, dropping below it when there is no room above. */
+export function placePill(
+  anchor: Box,
+  pill: { width: number; height: number },
+  viewportWidth: number
+): { left: number; top: number } {
+  const centred = (anchor.left + anchor.right) / 2 - pill.width / 2;
+  const left = Math.max(PILL_GAP, Math.min(centred, viewportWidth - pill.width - PILL_GAP));
+  const above = anchor.top - pill.height - PILL_GAP;
+  return { left, top: above >= PILL_GAP ? above : anchor.bottom + PILL_GAP };
+}
+
+function selectionBox(editor: Editor): Box | null {
+  const { from, to } = editor.state.selection;
+  try {
+    const start = editor.view.coordsAtPos(from);
+    const end = editor.view.coordsAtPos(to);
+    return {
+      left: Math.min(start.left, end.left),
+      right: Math.max(start.right, end.right),
+      top: Math.min(start.top, end.top),
+      bottom: Math.max(start.bottom, end.bottom)
+    };
+  } catch {
+    // The view has no layout yet (e.g. it is not attached to the document).
+    return null;
+  }
+}
+
+/** Mounts the formatting buttons as a floating pill that hovers over a non-empty selection. */
+export function mountFormatBar(container: HTMLElement, editor: Editor, linkPopover: LinkPopover): void {
   container.innerHTML = "";
   const buttons: { spec: ButtonSpec; el: HTMLButtonElement }[] = [];
 
@@ -80,17 +114,18 @@ export function mountFormatBar(
     container.appendChild(groupEl);
   });
 
-  if (onClose) {
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "jot-format-close";
-    close.title = "Hide Format Bar (⇧⌘F)";
-    close.setAttribute("aria-label", "Hide Format Bar");
-    close.textContent = "×";
-    close.addEventListener("mousedown", event => event.preventDefault());
-    close.addEventListener("click", onClose);
-    container.appendChild(close);
-  }
+  const reposition = () => {
+    const box = editor.state.selection.empty ? null : selectionBox(editor);
+    container.hidden = !box;
+    if (!box) return;
+    const { left, top } = placePill(
+      box,
+      { width: container.offsetWidth, height: container.offsetHeight },
+      window.innerWidth
+    );
+    container.style.left = `${left}px`;
+    container.style.top = `${top}px`;
+  };
 
   const refresh = () => {
     const state = renderedState(editor);
@@ -98,9 +133,12 @@ export function mountFormatBar(
       el.classList.toggle("is-active", Boolean(spec.isActive?.(state)));
       el.disabled = Boolean(spec.isDisabled?.(editor));
     }
+    reposition();
   };
 
   editor.on("transaction", refresh);
   editor.on("selectionUpdate", refresh);
+  document.addEventListener("scroll", reposition, true);
+  window.addEventListener("resize", reposition);
   refresh();
 }
