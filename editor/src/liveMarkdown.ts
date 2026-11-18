@@ -1,7 +1,7 @@
 import { Node, type Editor } from "@tiptap/core";
 import { DOMParser, Fragment, type Mark, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
-import { Transform, canJoin } from "@tiptap/pm/transform";
+import { Transform } from "@tiptap/pm/transform";
 
 interface MarkdownRuntime {
   parser: { parse(markdown: string): string };
@@ -32,31 +32,15 @@ function parseSource(editor: Editor, node: ProseMirrorNode): Fragment {
 
 /** Never persist the temporary source node, even while the user is typing. */
 export function renderedDocument(editor: Editor): ProseMirrorNode {
-  const tr = editor.state.tr;
-  renderSources(editor, tr);
-  return tr.doc;
-}
-
-function joinSameType(tr: Transaction, position: number): void {
-  const $position = tr.doc.resolve(position);
-  if ($position.nodeBefore?.type === $position.nodeAfter?.type && canJoin(tr.doc, position)) tr.join(position);
-}
-
-/** Splits the caret's list item into its own list so only its line reveals Markdown. */
-function isolateListItem(tr: Transaction): boolean {
-  const { $from, $to } = tr.selection;
-  const list = $from.node(1);
-  if ($from.depth < 2 || !list.type.isInGroup("list") || list.childCount < 2 || $from.index(1) !== $to.index(1)) {
-    return false;
-  }
-  const index = $from.index(1);
-  const startingAt = (offset: number) => [{
-    type: list.type,
-    attrs: "start" in list.attrs ? { ...list.attrs, start: list.attrs.start + offset } : list.attrs
-  }];
-  if (index < list.childCount - 1) tr.split($from.after(2), 1, startingAt(index + 1));
-  if (index > 0) tr.split($from.before(2), 1, startingAt(index));
-  return true;
+  const nodes: ProseMirrorNode[] = [];
+  editor.state.doc.forEach(node => {
+    if (node.type.name === sourceName) {
+      parseSource(editor, node).forEach(child => nodes.push(child));
+    } else {
+      nodes.push(node);
+    }
+  });
+  return editor.schema.topNodeType.create(null, nodes);
 }
 
 // Align visible text with its escaped Markdown representation to keep the
@@ -127,10 +111,6 @@ function renderSources(editor: Editor, tr: Transaction, keepPosition: number | n
           editor.schema.markFromJSON(mark)));
       }
     }
-    if (node.attrs.split) {
-      joinSameType(tr, position + fragment.size);
-      joinSameType(tr, position);
-    }
   }
 }
 
@@ -167,8 +147,7 @@ export const LiveMarkdown = Node.create({
       source: { default: "" },
       original: { default: null },
       typingMarks: { default: null },
-      caret: { default: 0 },
-      split: { default: false }
+      caret: { default: 0 }
     };
   },
   renderHTML() {
@@ -236,16 +215,16 @@ export const LiveMarkdown = Node.create({
         renderSources(editor, tr, activePosition);
         if (enabled && tr.selection instanceof TextSelection && tr.selection.$from.depth > 0) {
           const { $from: from, $to: to } = tr.selection;
-          let node = from.node(1);
+          const node = from.node(1);
           let hasMarks = false;
+          let hasList = node.type.isInGroup("list");
           node.descendants(child => {
             if (child.marks.length > 0) hasMarks = true;
+            if (child.type.isInGroup("list")) hasList = true;
           });
-          if (from.index(0) === to.index(0) && node.type.name !== sourceName &&
+          if (from.index(0) === to.index(0) && node.type.name !== sourceName && !hasList &&
               (node.type.name !== "paragraph" || hasMarks)) {
-            const split = isolateListItem(tr);
-            node = tr.selection.$from.node(1);
-            const position = tr.selection.$from.before(1);
+            const position = from.before(1);
             const document = editor.schema.topNodeType.create(null, node);
             let source = markdown(editor).serializer.serialize(document);
             const positions = sourcePositions(source, node.textContent);
@@ -267,7 +246,7 @@ export const LiveMarkdown = Node.create({
             }
             const sourceNode = editor.schema.nodes[sourceName].create(
               {
-                source, original: node.toJSON(), caret: anchor, split,
+                source, original: node.toJSON(), caret: anchor,
                 typingMarks: state.storedMarks?.map(mark => mark.toJSON()) ?? null
               },
               source ? editor.schema.text(source) : null

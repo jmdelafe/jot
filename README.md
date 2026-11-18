@@ -60,7 +60,9 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
   supported formatting (headings, lists, links, and inline styles).
   Pasting a URL over selected text with **⌘V** links it.
   Placing the cursor in formatted text reveals its editable Markdown; moving
-  away renders it again. **⌘L** edits a link.
+  away renders it again. Lists stay rendered while editing, including the item
+  under the cursor, so bullets, numbering, and checkboxes remain visible.
+  **⌘L** edits a link.
 - **Escape** closes the open palette or popover, otherwise it hides Jot.
 
 ## Data, privacy, and recovery

@@ -70,7 +70,6 @@ describe("active Markdown editing", () => {
 
   it.each([
     ["<blockquote><p>Quote</p></blockquote>", "> Quote"],
-    ["<ul><li><p>Item</p></li></ul>", "- Item"],
     ['<pre><code class="language-swift">let a = 1</code></pre>', "```swift\nlet a = 1\n```"],
     ['<p><a href="https://example.com">Link</a></p>', "[Link](https://example.com)"]
   ])("round-trips supported block and inline formatting: %s", (html, source) => {
@@ -165,51 +164,107 @@ describe("active Markdown editing", () => {
     expect(renderedDocument(jot.editor).firstChild!.childCount).toBe(2);
   });
 
-  it("reveals only the list item containing the caret", () => {
-    jot.editor.commands.setContent(
-      '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p>azure-eastus</p></li>' +
+  it.each([
+    ["bulletList", '<ul><li><p>azure-eastus</p></li><li><p><strong>gc-cus-02</strong></p></li><li><p></p></li></ul>'],
+    ["orderedList", '<ol start="4"><li><p>azure-eastus</p></li><li><p>gc-cus-02</p></li><li><p></p></li></ol>'],
+    ["taskList", '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p>azure-eastus</p></li>' +
       '<li data-type="taskItem" data-checked="true"><p>gc-cus-02</p></li>' +
-      '<li data-type="taskItem" data-checked="false"><p>third</p></li></ul>'
+      '<li data-type="taskItem" data-checked="false"><p></p></li></ul>']
+  ])("keeps every %s item rendered as the caret and selection move", (type, html) => {
+    jot.editor.commands.setContent(html);
+    const original = jot.editor.getJSON();
+    const originalHTML = jot.editor.getHTML();
+    const positions: number[] = [];
+    jot.editor.state.doc.descendants((node, position) => {
+      if (node.isTextblock) positions.push(position + 1);
+    });
+
+    for (const position of positions) {
+      focus(position);
+      expect(jot.editor.state.doc.firstChild!.type.name).toBe(type);
+      expect(jot.editor.getJSON()).toEqual(original);
+      expect(jot.editor.getHTML()).toBe(originalHTML);
+      expect(jot.editor.state.selection.from).toBe(position);
+      expect(mount.querySelectorAll("li")).toHaveLength(3);
+      expect(mount.querySelector("[data-markdown-source]")).toBeNull();
+    }
+
+    jot.editor.commands.setTextSelection({ from: positions[0], to: positions[2] });
+    expect(jot.editor.getJSON()).toEqual(original);
+    expect(mount.querySelectorAll("li")).toHaveLength(3);
+    if (type === "taskList") {
+      expect(Array.from(mount.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'), input => input.checked))
+        .toEqual([false, true, false]);
+    }
+    if (type === "orderedList") expect(mount.querySelector("ol")!.start).toBe(4);
+    expect(renderedDocument(jot.editor).toJSON()).toEqual(original);
+    blur();
+    expect(jot.editor.getJSON()).toEqual(original);
+  });
+
+  it("keeps nested lists rendered inside a blockquote", () => {
+    jot.editor.commands.setContent(
+      '<blockquote><p>Quote</p><ul data-type="taskList"><li data-type="taskItem"><p>Parent</p>' +
+      '<ul data-type="taskList"><li data-type="taskItem"><p>Child</p></li></ul></li>' +
+      '<li data-type="taskItem"><p>Sibling</p></li></ul></blockquote>'
     );
     const original = jot.editor.getJSON();
-    focus(jot.editor.state.doc.firstChild!.child(0).nodeSize + 3);
-    const { doc } = jot.editor.state;
-    expect(doc.childCount).toBe(3);
-    expect(doc.child(0).type.name).toBe("taskList");
-    expect(doc.child(0).textContent).toBe("azure-eastus");
-    expect(doc.child(1).textContent).toBe("- [x] gc-cus-02");
-    expect(doc.child(2).type.name).toBe("taskList");
-    expect(doc.child(2).textContent).toBe("third");
-    expect(renderedDocument(jot.editor).toJSON()).toEqual(original);
-    jot.editor.commands.setTextSelection(jot.editor.state.doc.content.size - 2);
-    expect(jot.editor.state.doc.childCount).toBe(2);
-    expect(jot.editor.state.doc.child(0).childCount).toBe(2);
-    expect(jot.editor.state.doc.child(1).textContent).toBe("- [ ] third");
+    const positions: number[] = [];
+    jot.editor.state.doc.descendants((node, position) => {
+      if (node.isTextblock) positions.push(position + 1);
+    });
+    for (const position of positions) {
+      focus(position);
+      expect(jot.editor.getJSON()).toEqual(original);
+      expect(mount.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
+      expect(mount.querySelectorAll("li li")).toHaveLength(1);
+      expect(mount.querySelector("[data-markdown-source]")).toBeNull();
+    }
     blur();
     expect(jot.editor.getJSON()).toEqual(original);
   });
 
-  it("keeps ordered list numbering when revealing one item", () => {
-    jot.editor.commands.setContent("<ol><li><p>One</p></li><li><p>Two</p></li><li><p>Three</p></li></ol>");
-    const original = jot.editor.getJSON();
-    focus(jot.editor.state.doc.firstChild!.child(0).nodeSize + 3);
-    expect(jot.editor.state.doc.child(1).textContent).toBe("2. Two");
-    expect(jot.editor.state.doc.child(2).attrs.start).toBe(3);
-    blur();
-    expect(jot.editor.getJSON()).toEqual(original);
-  });
-
-  it("keeps a new task item in the same list after Enter", () => {
+  it("keeps new task items rendered on Enter and exits an empty item", () => {
     jot.editor.commands.setContent('<ul data-type="taskList"><li data-type="taskItem"><p>One</p></li></ul>');
     focus(6);
     jot.editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     jot.editor.view.dispatch(jot.editor.state.tr.insertText("Two"));
-    expect(jot.editor.state.doc.child(0).type.name).toBe("taskList");
-    expect(jot.editor.state.doc.child(1).textContent).toBe("- [ ] Two");
-    const rendered = renderedDocument(jot.editor);
-    expect(rendered.childCount).toBe(1);
-    expect(rendered.firstChild!.childCount).toBe(2);
-    expect(rendered.firstChild!.lastChild!.textContent).toBe("Two");
+    expect(jot.editor.state.doc.childCount).toBe(1);
+    expect(jot.editor.state.doc.firstChild!.type.name).toBe("taskList");
+    expect(jot.editor.state.doc.firstChild!.childCount).toBe(2);
+    expect(jot.editor.state.doc.firstChild!.lastChild!.textContent).toBe("Two");
+    expect(mount.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    expect(mount.querySelector("[data-markdown-source]")).toBeNull();
+    expect(bridge.contentChanged).toHaveBeenLastCalledWith("note-1", jot.editor.getJSON());
+
+    jot.editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    jot.editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(jot.editor.state.doc.firstChild!.childCount).toBe(2);
+    expect(jot.editor.state.doc.lastChild!.type.name).toBe("paragraph");
+    expect(jot.editor.state.selection.$from.depth).toBe(1);
+  });
+
+  it("keeps the active task checkbox interactive and preserves edits through undo and export", () => {
+    jot.editor.commands.setContent(
+      '<ul data-type="taskList"><li data-type="taskItem"><p>One</p></li>' +
+      '<li data-type="taskItem"><p>Two</p></li></ul>'
+    );
+    focus(6);
+    jot.editor.view.dispatch(jot.editor.state.tr.insertText("!"));
+    mount.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    expect(jot.editor.state.doc.firstChild!.firstChild!.attrs.checked).toBe(true);
+    expect(bridge.contentChanged).toHaveBeenLastCalledWith("note-1", jot.editor.getJSON());
+    expect(jot.serialize("markdown")).toContain("- [x] One!");
+    expect(jot.serialize("html")).not.toContain("data-markdown-source");
+    jot.editor.commands.undo();
+    expect(jot.editor.state.doc.firstChild!.firstChild!.attrs.checked).toBe(false);
+    jot.editor.commands.undo();
+    expect(jot.editor.state.doc.firstChild!.firstChild!.textContent).toBe("One");
+    jot.editor.commands.redo();
+    jot.editor.commands.redo();
+    expect(jot.editor.state.doc.firstChild!.firstChild!.attrs.checked).toBe(true);
+    expect(jot.editor.state.doc.firstChild!.firstChild!.textContent).toBe("One!");
+    expect(mount.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
   });
 
   it("loads persisted JSON without presentation nodes or stale undo history", () => {
