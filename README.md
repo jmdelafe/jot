@@ -59,7 +59,8 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
 
 - **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
   ⌥-click the icon for a new note; right-click it for a menu.
-- **Window:** drag the title bar to move it. The note title is centered and
+- **Window:** dark charcoal glass, independent of the system appearance.
+  Drag the title bar to move it. The note title is centered and
   faint; the traffic lights and the ⌘, list, and + buttons (Actions, Browse
   Notes, New Note) fade in when the pointer is over the window. The window
   grows and shrinks with its content and remembers its width.

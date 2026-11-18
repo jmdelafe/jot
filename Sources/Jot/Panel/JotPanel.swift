@@ -18,6 +18,7 @@ final class JotPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
+        appearance = NSAppearance(named: .darkAqua)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         titlebarAppearsTransparent = true
