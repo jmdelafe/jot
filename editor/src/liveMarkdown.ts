@@ -217,10 +217,12 @@ export const LiveMarkdown = Node.create({
           const { $from: from, $to: to } = tr.selection;
           const node = from.node(1);
           let hasMarks = false;
+          let hasList = node.type.isInGroup("list");
           node.descendants(child => {
             if (child.marks.length > 0) hasMarks = true;
+            if (child.type.isInGroup("list")) hasList = true;
           });
-          if (from.index(0) === to.index(0) && node.type.name !== sourceName &&
+          if (from.index(0) === to.index(0) && node.type.name !== sourceName && !hasList &&
               (node.type.name !== "paragraph" || hasMarks)) {
             const position = from.before(1);
             const document = editor.schema.topNodeType.create(null, node);
