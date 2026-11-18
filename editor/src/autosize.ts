@@ -9,7 +9,7 @@ export const PALETTE_HEIGHT = 380;
  * the way Raycast Notes grows with your thoughts. Measurements are batched
  * to one per animation frame and only sent when the height changes.
  */
-export function measureContentHeight(editorEl: HTMLElement, formatBar: HTMLElement): number {
+export function measureContentHeight(editorEl: HTMLElement): number {
   const content = editorEl.querySelector<HTMLElement>(".ProseMirror");
   const last = content?.lastElementChild as HTMLElement | null | undefined;
   const style = getComputedStyle(editorEl);
@@ -19,20 +19,18 @@ export function measureContentHeight(editorEl: HTMLElement, formatBar: HTMLEleme
     height = last.offsetTop + last.offsetHeight + margin;
   }
   height += parseFloat(style.paddingBottom) || 0;
-  if (!formatBar.hidden) height += formatBar.offsetHeight;
   return Math.ceil(height);
 }
 
 export function installAutosize(
   editorEl: HTMLElement,
-  formatBar: HTMLElement,
   isPaletteOpen: () => boolean
 ): { schedule(): void } {
   let frame = 0;
   let lastSent = -1;
   const send = () => {
     frame = 0;
-    let height = measureContentHeight(editorEl, formatBar);
+    let height = measureContentHeight(editorEl);
     if (isPaletteOpen()) height = Math.max(height, PALETTE_HEIGHT);
     if (height !== lastSent) {
       lastSent = height;

@@ -35,7 +35,9 @@ final class PanelController: NSObject {
         super.init()
 
         panel.contentView = Self.makeGlassContentView(embedding: bridge.webView, title: titleLabel)
-        panel.addTitlebarAccessoryViewController(makeTitlebarAccessory())
+        let accessory = makeTitlebarAccessory()
+        panel.addTitlebarAccessoryViewController(accessory)
+        panel.revealOnHover([accessory.view])
         panel.onEscape = { [weak self] in self?.hide() }
         panel.delegate = self
 
@@ -63,6 +65,7 @@ final class PanelController: NSObject {
         recenterIfOffscreen()
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+        panel.syncChromeWithPointer()
         panel.makeFirstResponder(bridge.webView)
         if isEditorReady {
             bridge.focusEditor()
@@ -330,7 +333,7 @@ final class PanelController: NSObject {
     private static func makeGlassContentView(embedding webView: NSView, title: NSTextField) -> NSView {
         let glass = NSGlassEffectView()
         glass.style = .regular
-        glass.cornerRadius = 16
+        glass.cornerRadius = 18
         let content = NSView()
         glass.contentView = content
         webView.translatesAutoresizingMaskIntoConstraints = false
@@ -342,8 +345,8 @@ final class PanelController: NSObject {
             webView.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             webView.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
-        title.font = .systemFont(ofSize: 13, weight: .semibold)
-        title.textColor = .secondaryLabelColor
+        title.font = .systemFont(ofSize: 12)
+        title.textColor = .tertiaryLabelColor
         title.alignment = .center
         title.lineBreakMode = .byTruncatingTail
         title.translatesAutoresizingMaskIntoConstraints = false

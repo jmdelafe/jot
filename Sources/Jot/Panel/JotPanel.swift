@@ -41,6 +41,39 @@ final class JotPanel: NSPanel {
         }
     }
 
+    private var hoverRevealedViews: [NSView] = []
+
+    /// Keeps the window quiet at rest: the traffic lights and `extraViews`
+    /// fade in only while the pointer is over the panel.
+    func revealOnHover(_ extraViews: [NSView]) {
+        hoverRevealedViews = [standardWindowButton(.closeButton)?.superview].compactMap { $0 } + extraViews
+        contentView?.addTrackingArea(
+            NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        )
+        syncChromeWithPointer(animated: false)
+    }
+
+    /// The pointer may already be over the panel when it is shown, which
+    /// produces no enter event.
+    func syncChromeWithPointer(animated: Bool = true) {
+        setChromeVisible(frame.contains(NSEvent.mouseLocation), animated: animated)
+    }
+
+    override func mouseEntered(with event: NSEvent) { setChromeVisible(true, animated: true) }
+    override func mouseExited(with event: NSEvent) { setChromeVisible(false, animated: true) }
+
+    private func setChromeVisible(_ visible: Bool, animated: Bool) {
+        let alpha: CGFloat = visible ? 1 : 0
+        guard animated else {
+            hoverRevealedViews.forEach { $0.alphaValue = alpha }
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            hoverRevealedViews.forEach { $0.animator().alphaValue = alpha }
+        }
+    }
+
     /// `Escape` hides the panel without quitting the app; it must not be
     /// swallowed by any child view first.
     override func cancelOperation(_ sender: Any?) {

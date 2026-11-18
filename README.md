@@ -59,22 +59,23 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
 
 - **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
   ⌥-click the icon for a new note; right-click it for a menu.
-- **Window:** drag the title bar to move it. The note title is centered; the
-  ⌘, list, and + buttons open Actions, Browse Notes, and New Note. The window
+- **Window:** drag the title bar to move it. The note title is centered and
+  faint; the traffic lights and the ⌘, list, and + buttons (Actions, Browse
+  Notes, New Note) fade in when the pointer is over the window. The window
   grows and shrinks with its content and remembers its width.
 - **Multiple notes:** **⌘N** creates a note (an empty note is reused, and
   empty notes are discarded when you leave them). **⌘P** opens a searchable
   list of notes, with pinned notes first. In the list, **⇧⌘P** pins and **⌃X**
   deletes. Deleted notes stay in *Recently Deleted* for 60 days, where you can
   restore them.
-- **Actions (⌘K):** pin, show or hide the format bar (**⇧⌘F**), copy with
-  formatting (**⇧⌘C**) or as Markdown, HTML, or plain text, export to a file,
-  or delete.
+- **Actions (⌘K):** pin, copy with formatting (**⇧⌘C**) or as Markdown, HTML,
+  or plain text, export to a file, or delete.
 - **Formatting:** use Markdown-style shortcuts such as `## `, `- `, and `> `,
-  or the optional format bar. **⌘C** copies the selection as plain text;
-  **⇧⌘C** copies it with formatting (the whole note if nothing is selected).
-  Both show "Copied to Clipboard" after a successful copy. Formatted copy
-  includes HTML and RTF for rich-text apps, plus a plain-text fallback.
+  or the formatting pill that appears over selected text. **⌘C** copies the
+  selection as plain text; **⇧⌘C** copies it with formatting (the whole note
+  if nothing is selected). Both show "Copied to Clipboard" after a successful
+  copy. Formatted copy includes HTML and RTF for rich-text apps, plus a
+  plain-text fallback.
   **⌘V** pastes plain text in the surrounding style; **⇧⌘V** preserves
   supported formatting (headings, lists, links, and inline styles).
   Pasting a URL over selected text with **⌘V** links it.
