@@ -165,6 +165,53 @@ describe("active Markdown editing", () => {
     expect(renderedDocument(jot.editor).firstChild!.childCount).toBe(2);
   });
 
+  it("reveals only the list item containing the caret", () => {
+    jot.editor.commands.setContent(
+      '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p>azure-eastus</p></li>' +
+      '<li data-type="taskItem" data-checked="true"><p>gc-cus-02</p></li>' +
+      '<li data-type="taskItem" data-checked="false"><p>third</p></li></ul>'
+    );
+    const original = jot.editor.getJSON();
+    focus(jot.editor.state.doc.firstChild!.child(0).nodeSize + 3);
+    const { doc } = jot.editor.state;
+    expect(doc.childCount).toBe(3);
+    expect(doc.child(0).type.name).toBe("taskList");
+    expect(doc.child(0).textContent).toBe("azure-eastus");
+    expect(doc.child(1).textContent).toBe("- [x] gc-cus-02");
+    expect(doc.child(2).type.name).toBe("taskList");
+    expect(doc.child(2).textContent).toBe("third");
+    expect(renderedDocument(jot.editor).toJSON()).toEqual(original);
+    jot.editor.commands.setTextSelection(jot.editor.state.doc.content.size - 2);
+    expect(jot.editor.state.doc.childCount).toBe(2);
+    expect(jot.editor.state.doc.child(0).childCount).toBe(2);
+    expect(jot.editor.state.doc.child(1).textContent).toBe("- [ ] third");
+    blur();
+    expect(jot.editor.getJSON()).toEqual(original);
+  });
+
+  it("keeps ordered list numbering when revealing one item", () => {
+    jot.editor.commands.setContent("<ol><li><p>One</p></li><li><p>Two</p></li><li><p>Three</p></li></ol>");
+    const original = jot.editor.getJSON();
+    focus(jot.editor.state.doc.firstChild!.child(0).nodeSize + 3);
+    expect(jot.editor.state.doc.child(1).textContent).toBe("2. Two");
+    expect(jot.editor.state.doc.child(2).attrs.start).toBe(3);
+    blur();
+    expect(jot.editor.getJSON()).toEqual(original);
+  });
+
+  it("keeps a new task item in the same list after Enter", () => {
+    jot.editor.commands.setContent('<ul data-type="taskList"><li data-type="taskItem"><p>One</p></li></ul>');
+    focus(6);
+    jot.editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    jot.editor.view.dispatch(jot.editor.state.tr.insertText("Two"));
+    expect(jot.editor.state.doc.child(0).type.name).toBe("taskList");
+    expect(jot.editor.state.doc.child(1).textContent).toBe("- [ ] Two");
+    const rendered = renderedDocument(jot.editor);
+    expect(rendered.childCount).toBe(1);
+    expect(rendered.firstChild!.childCount).toBe(2);
+    expect(rendered.firstChild!.lastChild!.textContent).toBe("Two");
+  });
+
   it("loads persisted JSON without presentation nodes or stale undo history", () => {
     jot.editor.commands.setContent("<h3>Hello</h3>");
     focus(6);
