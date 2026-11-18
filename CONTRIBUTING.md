@@ -12,13 +12,16 @@ After cloning, or whenever `editor/package-lock.json` changes:
 ```sh
 make bootstrap
 make check
-make bundle
+make dist
 cd editor && npm run audit
 ```
 
-`make check` runs both test suites and builds the app. `make bundle` also checks
-the packaged editor resource, property list, and ad-hoc code signature. These
-are local builds, not notarized distribution artifacts.
+`make check` runs the test suites and builds the app. `make dist` verifies the
+app bundle, then produces an Apple Silicon ZIP and SHA-256 checksums. The app
+contains Jot's license and generated third-party notices; packaging fails if a
+dependency's license text is missing. These builds are ad-hoc signed, not
+Developer ID signed or notarized. Use `make bundle` for a local app without
+creating a download.
 
 Add regression tests for changed behavior. Persistence changes should cover
 write failures as well as successful saves; failed saves must keep pending
@@ -54,9 +57,10 @@ repository's **Security > Report a vulnerability** option when available. If it
 is unavailable, ask the maintainer to enable private reporting without posting
 exploit details or private data.
 
-## First-release checklist
+## Alpha-release checklist
 
-The first release is **source-only**. `Packaging/Info.plist` is the app version
+Alpha releases include an **Apple Silicon app ZIP**, checksums, and source
+archives. `Packaging/Info.plist` is the app version
 source of truth: `CFBundleShortVersionString` is the release version, currently
 `0.1.0`, and `CFBundleVersion` is the increasing build number. The private
 editor package has no independent release version.
@@ -74,13 +78,14 @@ editor package has no independent release version.
 - Back up existing notes before upgrading. Include supported OS/toolchain
   versions, installation steps, known limitations, and data recovery guidance
   in the release notes.
+- Verify the downloaded ZIP's checksum, extract it, and confirm its app
+  signature and bundled editor. Test installation on a clean macOS 26 machine
+  without the build toolchain; include the Gatekeeper warning in release notes.
 - Only after approval, run `make release VERSION=<version>` from `master` (for
   example `0.1.0-alpha.1`; see *Releases* in the README). The Release workflow
-  publishes a source release. Do not attach the ad-hoc-signed `build/Jot.app`
-  or describe it as a notarized download.
+  publishes the ZIP and checksums from CI. Do not describe the ad-hoc-signed
+  app as Developer ID signed or notarized.
 
-For a future binary release, use Developer ID signing with hardened runtime,
-notarize and staple the artifact, include all bundled third-party license
-notices, publish checksums and supported architectures, and verify installation
-through Gatekeeper on a clean machine. The current workflow does none of these
-distribution steps and requires no signing credentials.
+For future notarized releases, use Developer ID signing with hardened runtime,
+notarize and staple the artifact, and verify installation through Gatekeeper
+on a clean machine. The current workflow requires no signing credentials.

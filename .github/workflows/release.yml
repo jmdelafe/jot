@@ -1,6 +1,7 @@
 name: Release
 
-# Publishes a source release when a SemVer tag (for example v0.1.0-alpha.1)
+# Publishes an Apple Silicon app and source archives when a SemVer tag
+# (for example v0.1.0-alpha.1)
 # is pushed. Create tags with `make release VERSION=...`.
 on:
   push:
@@ -42,8 +43,14 @@ jobs:
         with:
           persist-credentials: false
 
-      # Source-only: GitHub attaches the source archives. Tags with a
-      # pre-release suffix (-alpha, -beta, -rc) are marked as pre-releases.
+      - uses: actions/download-artifact@v8
+        with:
+          name: jot-macos-arm64
+          path: release
+
+      - name: Verify download checksums
+        run: cd release && sha256sum --check checksums.txt
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,5 +58,6 @@ jobs:
         run: |
           flags=()
           if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
-          gh release create "$TAG" --verify-tag --title "Jot $TAG" \
+          gh release create "$TAG" release/Jot-macos-arm64.zip release/checksums.txt \
+            --verify-tag --title "Jot $TAG" \
             --notes-file .github/release-notes.md --generate-notes "${flags[@]}"

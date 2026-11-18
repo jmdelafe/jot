@@ -2,7 +2,7 @@ APP_NAME := Jot
 BUILD_DIR := build
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 
-.PHONY: bootstrap editor build test test-editor test-swift test-release check bundle run release clean
+.PHONY: bootstrap editor build test test-editor test-swift test-release check bundle dist run release clean
 
 ## Installs the exact editor dependencies recorded in the lockfile.
 bootstrap:
@@ -27,10 +27,11 @@ test-swift:
 
 test-release:
 	scripts/check-release-tag-test.sh
+	node --test scripts/third-party-notices.test.mjs
 
 check: test build
 
-## Local development only: this is not a notarized distribution artifact.
+## Ad-hoc signed, not Developer ID signed or notarized.
 bundle: editor
 	swift build -c release --product $(APP_NAME)
 	@set -eu; \
@@ -45,6 +46,7 @@ bundle: editor
 	cp -R "$$resource_bundle" "$(APP_BUNDLE)/Contents/Resources/"
 	cp Packaging/Info.plist "$(APP_BUNDLE)/Contents/Info.plist"
 	cp LICENSE "$(APP_BUNDLE)/Contents/Resources/LICENSE.txt"
+	node scripts/third-party-notices.mjs > "$(APP_BUNDLE)/Contents/Resources/THIRD_PARTY_NOTICES.txt"
 	@resources="$(APP_BUNDLE)/Contents/Resources/$(APP_NAME)_$(APP_NAME).bundle"; \
 	test -s "$$resources/Contents/Resources/editor/index.html" || \
 	test -s "$$resources/editor/index.html" || \
@@ -53,6 +55,15 @@ bundle: editor
 	codesign --sign - --entitlements Packaging/Jot.entitlements --force "$(APP_BUNDLE)"
 	codesign --verify --deep --strict "$(APP_BUNDLE)"
 	@echo "Built $(APP_BUNDLE)"
+
+## Apple Silicon download, with the same ad-hoc signature as local builds.
+dist: bundle
+	@test "$$(lipo -archs "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)")" = arm64 || \
+		{ echo "error: release downloads must contain only arm64 code; build on Apple Silicon" >&2; exit 1; }
+	mkdir -p "$(BUILD_DIR)/release"
+	ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(BUILD_DIR)/release/Jot-macos-arm64.zip"
+	unzip -tq "$(BUILD_DIR)/release/Jot-macos-arm64.zip"
+	cd "$(BUILD_DIR)/release" && shasum -a 256 Jot-macos-arm64.zip > checksums.txt && shasum -a 256 -c checksums.txt
 
 ## Bundles (if needed) and launches Jot.
 run: bundle
