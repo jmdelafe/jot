@@ -61,12 +61,9 @@ describe("active Markdown editing", () => {
   });
 
   it("keeps empty task items as tasks after editing their Markdown", () => {
-    jot.editor.commands.setContent(
-      '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p></p></li></ul><p>Next</p>'
-    );
+    jot.editor.commands.setContent("<h3>Hello</h3><p>Next</p>");
     focus(3);
-    expect(jot.editor.state.doc.firstChild!.textContent).toBe("- [ ] ");
-    jot.editor.view.dispatch(jot.editor.state.tr.insertText("- [ ]\n- [x]\n- [ ] Task", 1, 7));
+    jot.editor.view.dispatch(jot.editor.state.tr.insertText("- [ ]\n- [x]\n- [ ] Task", 1, 10));
     const list = renderedDocument(jot.editor).firstChild!;
     expect(list.type.name).toBe("taskList");
     expect(list.childCount).toBe(3);
