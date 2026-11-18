@@ -5,8 +5,27 @@ A fast, local, Raycast Notes-style scratchpad for the macOS menu bar. Press
 stay available across app launches. No Dock icon, account, or internet
 connection required.
 
-The first alpha release is **source-only**, under the [MIT license](LICENSE).
-There is no official signed or notarized app download yet.
+Alpha releases include a prebuilt **Apple Silicon** app, under the
+[MIT license](LICENSE). Downloads are ad-hoc signed, not Developer ID signed
+or notarized.
+
+## Install a prebuilt app
+
+Requires **macOS 26+ on Apple Silicon**. Download `Jot-macos-arm64.zip` and
+`checksums.txt` from [Releases](https://github.com/jmdelafe/jot/releases).
+In the folder containing both downloads, verify the archive:
+
+```sh
+shasum -a 256 -c checksums.txt
+```
+
+Unzip it, move `Jot.app` to `/Applications`, and open it. macOS may block the
+first launch because the app is not notarized. If you trust the download,
+use **System Settings > Privacy & Security > Open Anyway** after attempting
+to open it. Do not disable Gatekeeper globally.
+
+Quit Jot before replacing an older copy, and back up your notes before upgrading.
+Only Apple Silicon downloads are provided; source builds remain available below.
 
 ## Install from source
 
@@ -27,7 +46,7 @@ make run
 
 `make bootstrap` installs the locked editor dependencies. `make run` builds the
 editor and release app, creates an ad-hoc-signed `build/Jot.app`, and launches
-it. This is a local development build, not a distribution artifact.
+it. This uses the same ad-hoc signing as the release downloads.
 
 To keep a local installation, quit Jot and copy `build/Jot.app` to
 `/Applications`. Run only one copy at a time; copies share the same notes
@@ -97,8 +116,8 @@ Recently Deleted is not a permanent backup: notes are purged after 60 days.
 
 ### macOS permissions
 
-The app is signed for local development, not notarized for distribution.
-Gatekeeper may flag it when copied to another machine.
+Release downloads and local builds are ad-hoc signed, not notarized.
+Gatekeeper may flag downloaded copies; see the installation instructions above.
 The app remains sandboxed. Its network client entitlement is required for
 WebKit's helper processes to initialize, even though the editor loads only
 bundled content and works offline. The user-selected read-write file
@@ -114,6 +133,7 @@ entitlement is used only by the export save panel.
 | `make test-swift` | Run only the Swift test runner |
 | `make check` | Run tests and build both components |
 | `make bundle` | Create and verify a local release build at `build/Jot.app` without launching |
+| `make dist` | Build an Apple Silicon app ZIP and SHA-256 checksums in `build/release/` |
 | `make release VERSION=…` | Tag `origin/master` and trigger a GitHub release (see below) |
 | `make clean` | Remove Swift and app build output and editor caches |
 
@@ -142,12 +162,13 @@ dependency updates, bug reporting, and the source-release checklist.
 GitHub Actions runs `.github/workflows/ci.yml` on every pull request and on
 pushes to `master`. The **Editor** job typechecks and tests the editor on
 Ubuntu and audits the locked dependency tree. The **Swift** job builds the
-editor bundle, runs `make test-swift`, and builds and verifies the local app
-bundle on macOS 26. Run `make check`, `make bundle`, and
+editor bundle, runs `make test-swift`, and builds and verifies the Apple Silicon
+download on macOS 26. Run `make check`, `make dist`, and
 `cd editor && npm run audit` locally before a release. The
 [contribution guide](CONTRIBUTING.md) documents the temporary, expiring
 exception for one build/test dependency advisory.
-CI does not publish artifacts or change repository visibility.
+On release tags, CI passes the download to the Release workflow; ordinary CI
+runs do not publish downloads or change repository visibility.
 
 ### Releases
 
@@ -165,8 +186,9 @@ make release VERSION=0.1.0-alpha.1
 ```
 
 This validates the version and pushes the tag. `.github/workflows/release.yml`
-then reruns CI and publishes a source-only GitHub release with
-`.github/release-notes.md` and generated changelog notes. Tags with a
+then reruns CI and publishes `Jot-macos-arm64.zip`, `checksums.txt`, and the
+GitHub source archives, with `.github/release-notes.md` and generated changelog
+notes. The app includes Jot's license and third-party notices. Tags with a
 pre-release suffix are marked as pre-releases.
 
 ## Project layout
