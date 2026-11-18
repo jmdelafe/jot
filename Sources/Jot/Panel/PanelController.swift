@@ -326,6 +326,14 @@ final class PanelController: NSObject {
     @objc private func handleNotesButton() { bridge.showNotes() }
     @objc private func handleNewNoteButton() { newNote() }
 
+    /// Milky in light mode, charcoal in dark mode, so the glass keeps a calm,
+    /// paper-like tone instead of taking on whatever window is behind it.
+    private static let glassTint = NSColor(name: "JotGlassTint") { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.12, green: 0.12, blue: 0.15, alpha: 0.5)
+            : NSColor(white: 1, alpha: 0.5)
+    }
+
     /// Wraps the web view in the macOS 26 Liquid Glass material so the
     /// panel's chrome matches the system's floating-surface language. The
     /// web view itself stays visually transparent (see `EditorBridge`) so
@@ -334,6 +342,7 @@ final class PanelController: NSObject {
         let glass = NSGlassEffectView()
         glass.style = .regular
         glass.cornerRadius = 18
+        glass.tintColor = glassTint
         let content = NSView()
         glass.contentView = content
         webView.translatesAutoresizingMaskIntoConstraints = false
