@@ -275,6 +275,12 @@ body {
   height: 1.75em;
 }
 
+/* Fill the row: an empty item would otherwise be 0px wide, and WebKit
+   doesn't draw the caret in it. */
+#editor ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
 #editor ul[data-type="taskList"] input[type="checkbox"] {
   appearance: none;
   flex: none;
