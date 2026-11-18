@@ -1,4 +1,4 @@
-import { Editor, getHTMLFromFragment } from "@tiptap/core";
+import { Editor, InputRule, getHTMLFromFragment } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { DOMParser } from "@tiptap/pm/model";
@@ -39,6 +39,34 @@ function isBlankDocument(doc: ProseMirrorNode): boolean {
   return only !== null && only.type.name === "paragraph" && only.childCount === 0;
 }
 
+// Typing "- " makes a bullet before "[ ] " can be typed, so Markdown-style
+// "- [ ] " would leave literal brackets. Turn that list item into a task.
+const listItemToTask = new InputRule({
+  find: /^\[([ xX])?\]\s$/,
+  handler: ({ state, range, match, chain, can }) => {
+    const $from = state.doc.resolve(range.from);
+    if ($from.depth < 3) return null;
+    const item = $from.node(-1);
+    const outer = $from.node(-3).type.name;
+    if (item.type.name !== "listItem" || item.childCount !== 1 || outer === "listItem" || outer === "taskItem" ||
+        !can().liftListItem("listItem")) {
+      return null;
+    }
+    // List commands expect a transaction without earlier steps, so the
+    // typed brackets are removed last.
+    chain()
+      .liftListItem("listItem")
+      .toggleTaskList()
+      .updateAttributes("taskItem", { checked: match[1]?.toLowerCase() === "x" })
+      .command(({ tr }) => {
+        tr.delete(tr.mapping.map(range.from), tr.mapping.map(range.to));
+        return true;
+      })
+      .run();
+    return undefined;
+  }
+});
+
 export function createEditor(mountEl: HTMLElement): JotEditor {
   const linkPopover = new LinkPopover();
   // The shortcuts extension needs a reference to the editor it will be
@@ -70,7 +98,11 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
         placeholder: ({ editor: current }) => (isBlankDocument(current.state.doc) ? PLACEHOLDER : "")
       }),
       TaskList,
-      TaskItem.configure({ nested: true }),
+      TaskItem.extend({
+        addInputRules() {
+          return [...(this.parent?.() ?? []), listItemToTask];
+        }
+      }).configure({ nested: true }),
       Markdown,
       LiveMarkdown,
       MarkdownHistory,
@@ -168,6 +200,12 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
     },
     focus() {
       editor.commands.focus("end");
+      // When the panel is shown, WebKit may only gain window focus after this
+      // call and then resets the caret to the start of the note, revealing the
+      // first heading's markdown source. Place it again once focus arrives.
+      if (!document.hasFocus()) {
+        window.addEventListener("focus", () => editor.commands.focus("end"), { once: true });
+      }
     }
   };
 }

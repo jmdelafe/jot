@@ -59,11 +59,12 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
 
 - **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
   ⌥-click the icon for a new note; right-click it for a menu.
-- **Window:** dark charcoal glass, independent of the system appearance.
+- **Window:** translucent dark glass that looks the same focused or not, independent of the system appearance.
   Drag the title bar to move it. The note title is centered and
-  faint; the traffic lights and the ⌘, list, and + buttons (Actions, Browse
-  Notes, New Note) fade in when the pointer is over the window. The window
-  grows and shrinks with its content and remembers its width.
+  faint; when the pointer is over the window it fades out and the traffic
+  lights and the ⌘, list, and + buttons (Actions, Browse Notes, New Note)
+  fade in. The window grows and shrinks with its content and remembers its
+  width.
 - **Multiple notes:** **⌘N** creates a note (an empty note is reused, and
   empty notes are discarded when you leave them). **⌘P** opens a searchable
   list of notes, with pinned notes first. In the list, **⇧⌘P** pins and **⌃X**
@@ -71,7 +72,8 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
   restore them.
 - **Actions (⌘K):** pin, copy with formatting (**⇧⌘C**) or as Markdown, HTML,
   or plain text, export to a file, or delete.
-- **Formatting:** use Markdown-style shortcuts such as `## `, `- `, and `> `,
+- **Formatting:** use Markdown-style shortcuts such as `## `, `- `, `- [ ] `,
+  and `> `,
   or the formatting pill that appears over selected text. **⌘C** copies the
   selection as plain text; **⇧⌘C** copies it with formatting (the whole note
   if nothing is selected). Both show "Copied to Clipboard" after a successful
@@ -80,8 +82,9 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
   **⌘V** pastes plain text in the surrounding style; **⇧⌘V** preserves
   supported formatting (headings, lists, links, and inline styles).
   Pasting a URL over selected text with **⌘V** links it.
-  Placing the cursor in formatted text reveals its editable Markdown; moving
-  away renders it again. Lists stay rendered while editing, including the item
+  Placing the cursor in formatted text reveals its editable Markdown, with the
+  markers dimmed and the formatting still shown; moving away renders it again.
+  Lists stay rendered while editing, including the item
   under the cursor, so bullets, numbering, and checkboxes remain visible.
   **⌘L** edits a link.
 - **Escape** closes the open palette or popover, otherwise it hides Jot.

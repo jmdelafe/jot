@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEditor, type JotEditor } from "../src/editor";
 import { renderedDocument, withRenderedMarkdown } from "../src/liveMarkdown";
@@ -44,6 +45,75 @@ describe("active Markdown editing", () => {
     blur();
     expect(jot.editor.state.doc.firstChild!.type.name).toBe("heading");
     expect(jot.editor.state.selection.from).toBe(3);
+  });
+
+  it("identifies revealed headings and quotes and dims their markers", () => {
+    jot.editor.commands.setContent("<h3>Hello</h3><blockquote><p>Quote</p></blockquote>");
+    focus(3);
+    let source = jot.editor.view.dom.querySelector(".jot-markdown-source")!;
+    expect(source.getAttribute("data-block")).toBe("h3");
+    expect(source.querySelector(".jot-markdown-marker")!.textContent).toBe("### ");
+
+    jot.editor.commands.setTextSelection(jot.editor.state.doc.firstChild!.nodeSize + 2);
+    source = jot.editor.view.dom.querySelector(".jot-markdown-source")!;
+    expect(source.getAttribute("data-block")).toBe("blockquote");
+    expect(source.querySelector(".jot-markdown-marker")!.textContent).toBe("> ");
+  });
+
+  it.each([
+    ["alone", "<blockquote><p>Quote</p></blockquote>"],
+    ["between paragraphs", "<p>Before</p><blockquote><p>Quote</p></blockquote><p>After</p>"]
+  ])("preserves quote borders and spacing while editing a quote %s", (_location, html) => {
+    const stylesheet = document.createElement("style");
+    stylesheet.textContent = readFileSync(`${import.meta.dirname}/../src/style.css`, "utf8");
+    document.head.appendChild(stylesheet);
+    mount.id = "editor";
+    const appearance = (element: Element) => {
+      const style = getComputedStyle(element);
+      return {
+        paddingLeft: style.paddingLeft,
+        borderLeftWidth: style.borderLeftWidth,
+        borderLeftStyle: style.borderLeftStyle,
+        marginTop: style.marginTop,
+        marginBottom: style.marginBottom,
+        color: style.color
+      };
+    };
+
+    try {
+      jot.editor.commands.setContent(html);
+      const rendered = appearance(mount.querySelector("blockquote")!);
+      let quotePosition = 2;
+      jot.editor.state.doc.forEach((node, position) => {
+        if (node.type.name === "blockquote") quotePosition = position + 2;
+      });
+
+      focus(quotePosition);
+      const source = mount.querySelector('.jot-markdown-source[data-block="blockquote"]')!;
+      expect(source).not.toBeNull();
+      expect(appearance(source)).toEqual(rendered);
+      expect(parseFloat(rendered.paddingLeft)).toBeGreaterThan(0);
+      expect(parseFloat(rendered.borderLeftWidth)).toBeGreaterThan(0);
+      expect(rendered.borderLeftStyle).toBe("solid");
+
+      blur();
+      expect(appearance(mount.querySelector("blockquote")!)).toEqual(rendered);
+    } finally {
+      stylesheet.remove();
+    }
+  });
+
+  it("previews inline formatting while its Markdown is revealed", () => {
+    jot.editor.commands.setContent('<p><strong>Bold</strong> <em>it</em> <code>⌥⌘N</code> <a href="https://x.y">go</a> 2*3</p>');
+    focus(2);
+    const source = jot.editor.view.dom.querySelector(".jot-markdown-source")!;
+    const text = (selector: string) => Array.from(source.querySelectorAll(selector), span => span.textContent);
+    expect(source.textContent).toBe("**Bold** *it* `⌥⌘N` [go](https://x.y) 2\\*3");
+    expect(text(".jot-md-strong")).toEqual(["Bold"]);
+    expect(text(".jot-md-em")).toEqual(["it"]);
+    expect(text(".jot-md-code").join("")).toBe("`⌥⌘N`");
+    expect(text(".jot-md-link")).toEqual(["go"]);
+    expect(text(".jot-markdown-marker")).toEqual(["**", "**", "*", "*", "`", "`", "[", "](https://x.y)", "\\"]);
   });
 
   it("parses edited Markdown, saves rich JSON, and renders when leaving the line", () => {
