@@ -21,12 +21,18 @@ function markdown(editor: Editor): MarkdownRuntime {
   return editor.storage.markdown;
 }
 
+// markdown-it trims an empty "- [ ]", which hides it from the task-list
+// plugin, so pad it with a placeholder that is removed after parsing.
+const emptyTask = /^(\s*(?:[-*+]|\d+[.)])[ \t]+\[[ xX]\])[ \t]*$/gm;
+const taskPlaceholder = "\u2060";
+
 function parseSource(editor: Editor, node: ProseMirrorNode): Fragment {
   if (node.textContent === node.attrs.source) {
     return Fragment.from(editor.schema.nodeFromJSON(node.attrs.original));
   }
+  const source = node.textContent.replace(emptyTask, `$1 ${taskPlaceholder}`);
   const container = document.createElement("div");
-  container.innerHTML = markdown(editor).parser.parse(node.textContent);
+  container.innerHTML = markdown(editor).parser.parse(source).replaceAll(taskPlaceholder, "");
   return DOMParser.fromSchema(editor.schema).parse(container).content;
 }
 

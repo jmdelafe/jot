@@ -331,7 +331,7 @@ final class PanelController: NSObject {
     private static let glassTint = NSColor(name: "JotGlassTint") { appearance in
         appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
             ? NSColor(srgbRed: 0.12, green: 0.12, blue: 0.15, alpha: 0.5)
-            : NSColor(white: 1, alpha: 0.5)
+            : NSColor(white: 1, alpha: 0.8)
     }
 
     /// Wraps the web view in the macOS 26 Liquid Glass material so the

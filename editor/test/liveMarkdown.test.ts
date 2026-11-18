@@ -60,6 +60,21 @@ describe("active Markdown editing", () => {
     expect(jot.editor.state.doc.firstChild!.attrs.level).toBe(2);
   });
 
+  it("keeps empty task items as tasks after editing their Markdown", () => {
+    jot.editor.commands.setContent(
+      '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p></p></li></ul><p>Next</p>'
+    );
+    focus(3);
+    expect(jot.editor.state.doc.firstChild!.textContent).toBe("- [ ] ");
+    jot.editor.view.dispatch(jot.editor.state.tr.insertText("- [ ]\n- [x]\n- [ ] Task", 1, 7));
+    const list = renderedDocument(jot.editor).firstChild!;
+    expect(list.type.name).toBe("taskList");
+    expect(list.childCount).toBe(3);
+    expect(list.child(0).textContent).toBe("");
+    expect(list.child(1).attrs.checked).toBe(true);
+    expect(list.child(2).textContent).toBe("Task");
+  });
+
   it("reveals inline formatting even if the paragraph starts with plain text", () => {
     jot.editor.commands.setContent("<p>Hello <strong>world</strong></p><p>Next</p>");
     focus(9);

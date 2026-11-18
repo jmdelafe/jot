@@ -30,6 +30,7 @@ final class JotPanel: NSPanel {
         minSize = NSSize(width: 240, height: 420)
         hidesOnDeactivate = false
         standardWindowButton(.zoomButton)?.isHidden = true
+        standardWindowButton(.miniaturizeButton)?.isHidden = true
         let restored = setFrameUsingName("JotPanel")
         setFrameAutosaveName("JotPanel")
         if !restored {
