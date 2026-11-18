@@ -37,7 +37,7 @@ final class PanelController: NSObject {
         panel.contentView = Self.makeGlassContentView(embedding: bridge.webView, title: titleLabel)
         let accessory = makeTitlebarAccessory()
         panel.addTitlebarAccessoryViewController(accessory)
-        panel.revealOnHover([accessory.view])
+        panel.revealOnHover([accessory.view], hiding: [titleLabel])
         panel.onEscape = { [weak self] in self?.hide() }
         panel.delegate = self
 
@@ -326,17 +326,35 @@ final class PanelController: NSObject {
     @objc private func handleNotesButton() { bridge.showNotes() }
     @objc private func handleNewNoteButton() { newNote() }
 
-    /// Wraps the web view in the macOS 26 Liquid Glass material so the
-    /// panel's chrome matches the system's floating-surface language. The
-    /// web view itself stays visually transparent (see `EditorBridge`) so
-    /// the glass shows through behind the text.
+    /// Wraps the web view in an always-active popover vibrancy layer inside
+    /// clear Liquid Glass. The vibrancy gives a translucent, readable
+    /// surface that looks identical whether or not the panel is key (plain
+    /// glass brightens when unfocused), and the clear glass on top adds the
+    /// system's edge lighting. The web view stays transparent (see
+    /// `EditorBridge`) so the material shows through behind the text.
     private static func makeGlassContentView(embedding webView: NSView, title: NSTextField) -> NSView {
+        let cornerRadius: CGFloat = 18
         let glass = NSGlassEffectView()
-        glass.style = .regular
-        glass.cornerRadius = 18
-        glass.tintColor = NSColor(srgbRed: 0.12, green: 0.12, blue: 0.15, alpha: 0.85)
+        glass.style = .clear
+        glass.cornerRadius = cornerRadius
+        let vibrancy = NSVisualEffectView()
+        vibrancy.material = .popover
+        vibrancy.blendingMode = .behindWindow
+        vibrancy.state = .active
+        vibrancy.wantsLayer = true
+        vibrancy.layer?.cornerRadius = cornerRadius
+        vibrancy.layer?.cornerCurve = .continuous
+        vibrancy.layer?.masksToBounds = true
+        glass.contentView = vibrancy
         let content = NSView()
-        glass.contentView = content
+        content.translatesAutoresizingMaskIntoConstraints = false
+        vibrancy.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: vibrancy.topAnchor),
+            content.leadingAnchor.constraint(equalTo: vibrancy.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: vibrancy.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: vibrancy.bottomAnchor),
+        ])
         webView.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(webView)
         // Leave the native title bar available for dragging and window controls.

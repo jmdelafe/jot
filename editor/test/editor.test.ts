@@ -231,4 +231,50 @@ describe("createEditor", () => {
     expect(bridge.copyRichText).toHaveBeenCalledWith("<h1>Title</h1><p><strong>bold</strong></p>", "Title\nbold");
     jotEditor.editor.destroy();
   });
+
+  it("puts the caret back at the end when the window gains focus after focus()", () => {
+    const jotEditor = createEditor(mount);
+    jotEditor.loadNote({ id: "n", document: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Title" }] },
+        { type: "paragraph", content: [{ type: "text", text: "Body" }] }
+      ]
+    } });
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    jotEditor.focus();
+    const end = jotEditor.editor.state.doc.content.size - 1;
+    jotEditor.editor.commands.setTextSelection(1);
+    window.dispatchEvent(new FocusEvent("focus"));
+    expect(jotEditor.editor.state.selection.from).toBe(end);
+    hasFocus.mockRestore();
+    jotEditor.editor.destroy();
+  });
+
+  it.each([
+    ["- [ ] ", false],
+    ["1. [x] ", true]
+  ])("turns a list item typed as %j into a task, leaving earlier items alone", (marker, checked) => {
+    const jotEditor = createEditor(mount);
+    const { editor } = jotEditor;
+    const type = (text: string) => {
+      for (const ch of text) {
+        const { from, to } = editor.state.selection;
+        const handled = editor.view.someProp("handleTextInput", handler =>
+          handler(editor.view, from, to, ch, () => editor.state.tr.insertText(ch, from, to)));
+        if (!handled) editor.view.dispatch(editor.state.tr.insertText(ch, from, to));
+      }
+    };
+    type(`${marker.split("[")[0]}one`);
+    editor.commands.splitListItem("listItem");
+    type(`${marker.slice(marker.indexOf("["))}two`);
+
+    const [list, tasks] = editor.getJSON().content!;
+    expect(list.content).toHaveLength(1);
+    expect(tasks).toMatchObject({
+      type: "taskList",
+      content: [{ type: "taskItem", attrs: { checked }, content: [{ content: [{ text: "two" }] }] }]
+    });
+    jotEditor.editor.destroy();
+  });
 });

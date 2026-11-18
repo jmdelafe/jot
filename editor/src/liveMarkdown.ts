@@ -2,6 +2,7 @@ import { Node, type Editor } from "@tiptap/core";
 import { DOMParser, Fragment, type Mark, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { Transform } from "@tiptap/pm/transform";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 interface MarkdownRuntime {
   parser: { parse(markdown: string): string };
@@ -120,6 +121,89 @@ function renderSources(editor: Editor, tr: Transaction, keepPosition: number | n
   }
 }
 
+const markerClass = "jot-markdown-marker";
+const emphasis = /(?<![*~])(\*{1,3}|~~)(?![\s*~])([^]*?[^\s*~])\1(?![*~])|(?<![\p{L}\p{N}_])(_{1,3})(?![\s_])([^]*?[^\s_])\3(?![\p{L}\p{N}_])/gu;
+const emphasisClasses = ["jot-md-em", "jot-md-strong", "jot-md-strong jot-md-em"];
+
+// A light preview of inline Markdown. Matched syntax is masked so later
+// patterns skip code spans, link targets and markers already styled.
+function inlineDecorations(text: string, add: (from: number, to: number, className: string) => void): void {
+  let masked = text;
+  const mask = (from: number, to: number) => {
+    masked = masked.slice(0, from) + "\0".repeat(to - from) + masked.slice(to);
+  };
+  for (const { 0: match, 1: ticks, index = 0 } of text.matchAll(/\\[!-/:-@[-`{-~]|(?<!`)(`+)(?!`)[^]*?[^`]\1(?!`)/gu)) {
+    const to = index + match.length;
+    if (ticks) {
+      add(index, index + ticks.length, `jot-md-code jot-md-code-start ${markerClass}`);
+      add(index + ticks.length, to - ticks.length, "jot-md-code");
+      add(to - ticks.length, to, `jot-md-code jot-md-code-end ${markerClass}`);
+    } else {
+      add(index, index + 1, markerClass);
+    }
+    mask(index, to);
+  }
+  for (const { 0: match, 1: label, index = 0 } of masked.matchAll(/\[([^\]\n]*)\]\([^()\s]*(?:\s+"[^"\n]*")?\)/gu)) {
+    const labelEnd = index + 1 + label.length;
+    add(index, index + 1, markerClass);
+    add(index + 1, labelEnd, "jot-md-link");
+    add(labelEnd, index + match.length, markerClass);
+    mask(index, index + 1);
+    mask(labelEnd, index + match.length);
+  }
+  for (const { 0: match, 1: content, index = 0 } of masked.matchAll(/<u>([^]*?)<\/u>/gu)) {
+    const contentEnd = index + 3 + content.length;
+    add(index, index + 3, markerClass);
+    add(index + 3, contentEnd, "jot-md-underline");
+    add(contentEnd, index + match.length, markerClass);
+    mask(index, index + 3);
+    mask(contentEnd, index + match.length);
+  }
+  // Masking an outer pair's markers lets the next pass find nested pairs.
+  for (let found = true; found;) {
+    found = false;
+    for (const { 0: match, 1: stars, 3: underscores, index = 0 } of masked.matchAll(emphasis)) {
+      const delimiter = (stars ?? underscores).length;
+      const to = index + match.length;
+      add(index, index + delimiter, markerClass);
+      add(index + delimiter, to - delimiter, stars === "~~" ? "jot-md-strike" : emphasisClasses[delimiter - 1]);
+      add(to - delimiter, to, markerClass);
+      mask(index, index + delimiter);
+      mask(to - delimiter, to);
+      found = true;
+    }
+  }
+}
+
+// Source keeps the look of the block and inline formatting it stands for,
+// with its markers dimmed, so moving the caret into it doesn't reflow the note.
+function sourceDecorations(doc: ProseMirrorNode): DecorationSet {
+  const decorations: Decoration[] = [];
+  doc.forEach((node, position) => {
+    if (node.type.name !== sourceName) return;
+    const text = node.textContent;
+    const add = (from: number, to: number, className: string) => {
+      if (from < to) decorations.push(Decoration.inline(position + 1 + from, position + 1 + to, { class: className }));
+    };
+    const heading = /^(#{1,6}) /.exec(text);
+    const fence = /^(```|~~~)/.test(text);
+    const quote = text.startsWith(">");
+    const block = heading ? `h${heading[1].length}` : fence ? "code" : quote ? "blockquote" : null;
+    if (block) decorations.push(Decoration.node(position, position + node.nodeSize, { "data-block": block }));
+    if (fence) {
+      for (const { 0: line, index = 0 } of text.matchAll(/^(?:```|~~~).*$/gm)) add(index, index + line.length, markerClass);
+      return;
+    }
+    if (heading || quote) {
+      for (const { 0: prefix, index = 0 } of text.matchAll(heading ? /^#+ /g : /^>[> ]*/gm)) {
+        add(index, index + prefix.length, markerClass);
+      }
+    }
+    inlineDecorations(text, add);
+  });
+  return DecorationSet.create(doc, decorations);
+}
+
 export function renderedState(editor: Editor, state = editor.state): EditorState {
   const tr = state.tr;
   renderSources(editor, tr);
@@ -198,6 +282,7 @@ export const LiveMarkdown = Node.create({
         apply: (tr, enabled) => tr.getMeta(liveMarkdownKey) ?? enabled
       },
       props: {
+        decorations: state => sourceDecorations(state.doc),
         handleDOMEvents: {
           focus: view => {
             view.dispatch(view.state.tr.setMeta(liveMarkdownKey, true).setMeta("addToHistory", false));

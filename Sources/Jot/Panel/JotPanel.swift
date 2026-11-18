@@ -44,11 +44,14 @@ final class JotPanel: NSPanel {
     }
 
     private var hoverRevealedViews: [NSView] = []
+    private var hoverHiddenViews: [NSView] = []
 
     /// Keeps the window quiet at rest: the traffic lights and `extraViews`
-    /// fade in only while the pointer is over the panel.
-    func revealOnHover(_ extraViews: [NSView]) {
+    /// fade in only while the pointer is over the panel, and `restingViews`
+    /// fade out to make room for them.
+    func revealOnHover(_ extraViews: [NSView], hiding restingViews: [NSView] = []) {
         hoverRevealedViews = [standardWindowButton(.closeButton)?.superview].compactMap { $0 } + extraViews
+        hoverHiddenViews = restingViews
         contentView?.addTrackingArea(
             NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
         )
@@ -65,14 +68,14 @@ final class JotPanel: NSPanel {
     override func mouseExited(with event: NSEvent) { setChromeVisible(false, animated: true) }
 
     private func setChromeVisible(_ visible: Bool, animated: Bool) {
-        let alpha: CGFloat = visible ? 1 : 0
+        let views = hoverRevealedViews.map { ($0, visible) } + hoverHiddenViews.map { ($0, !visible) }
         guard animated else {
-            hoverRevealedViews.forEach { $0.alphaValue = alpha }
+            views.forEach { view, shown in view.alphaValue = shown ? 1 : 0 }
             return
         }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.25
-            hoverRevealedViews.forEach { $0.animator().alphaValue = alpha }
+            views.forEach { view, shown in view.animator().alphaValue = shown ? 1 : 0 }
         }
     }
 
