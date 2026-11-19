@@ -116,6 +116,34 @@ describe("active Markdown editing", () => {
     expect(text(".jot-markdown-marker")).toEqual(["**", "**", "*", "*", "`", "`", "[", "](https://x.y)", "\\"]);
   });
 
+  it("opens links only on ⌘-click, from rendered text or revealed Markdown", () => {
+    jot.editor.commands.setContent('<p><a href="https://x.y">go</a> and https://bare.example</p><p>Next</p>');
+    const mousedown = (target: Element, metaKey: boolean) =>
+      target.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, metaKey }));
+
+    const anchor = mount.querySelector("a")!;
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    anchor.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(bridge.openLink).not.toHaveBeenCalled();
+    expect(mousedown(anchor, true)).toBe(false);
+    expect(bridge.openLink).toHaveBeenLastCalledWith("https://x.y/");
+
+    focus(2);
+    const source = mount.querySelector(".jot-markdown-source")!;
+    expect(source.textContent).toBe("[go](https://x.y) and <https://bare.example>");
+    const posAtCoords = vi.spyOn(jot.editor.view, "posAtCoords");
+    posAtCoords.mockReturnValue({ pos: 3, inside: -1 });
+    mousedown(source, true);
+    expect(bridge.openLink).toHaveBeenLastCalledWith("https://x.y");
+    posAtCoords.mockReturnValue({ pos: 30, inside: -1 });
+    mousedown(source, true);
+    expect(bridge.openLink).toHaveBeenLastCalledWith("https://bare.example");
+    posAtCoords.mockReturnValue({ pos: 21, inside: -1 });
+    mousedown(source, true);
+    expect(bridge.openLink).toHaveBeenCalledTimes(3);
+  });
+
   it("parses edited Markdown, saves rich JSON, and renders when leaving the line", () => {
     jot.editor.commands.setContent("<h3>Hello</h3><p>Next</p>");
     focus(3);
