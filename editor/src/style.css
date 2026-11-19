@@ -46,7 +46,7 @@ body {
   margin: 0;
   height: 100%;
   /* The page background must stay fully transparent so the native
-     native glass material behind the WKWebView shows through. */
+     glass material behind the WKWebView shows through. */
   background: transparent;
 }
 

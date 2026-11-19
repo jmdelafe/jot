@@ -156,7 +156,6 @@ public enum OutboundBridgePayload {
                     "searchText": .string(note.searchText),
                     "pinned": .bool(note.isPinned),
                     "openedAt": millis(note.openedAt),
-                    "updatedAt": millis(note.updatedAt),
                     "deletedAt": note.deletedAt.map(millis) ?? .null
                 ])
             })

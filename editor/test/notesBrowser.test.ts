@@ -7,9 +7,9 @@ const NOW = 1_700_000_000_000;
 const payload: NotesPayload = {
   currentId: "a",
   notes: [
-    { id: "p", title: "Daily Todos", searchText: "Daily Todos\nmilk", pinned: true, openedAt: NOW - 40 * 60_000, updatedAt: NOW, deletedAt: null },
-    { id: "a", title: "Stay in flow", searchText: "Stay in flow", pinned: false, openedAt: NOW, updatedAt: NOW, deletedAt: null },
-    { id: "d", title: "Old idea", searchText: "Old idea", pinned: false, openedAt: NOW, updatedAt: NOW, deletedAt: NOW - 3 * 86_400_000 }
+    { id: "p", title: "Daily Todos", searchText: "Daily Todos\nmilk", pinned: true, openedAt: NOW - 40 * 60_000, deletedAt: null },
+    { id: "a", title: "Stay in flow", searchText: "Stay in flow", pinned: false, openedAt: NOW, deletedAt: null },
+    { id: "d", title: "Old idea", searchText: "Old idea", pinned: false, openedAt: NOW, deletedAt: NOW - 3 * 86_400_000 }
   ]
 };
 

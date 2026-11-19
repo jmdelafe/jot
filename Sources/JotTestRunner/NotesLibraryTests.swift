@@ -535,6 +535,7 @@ struct NotesLibraryTests {
         #expect(first["title"]?.stringValue == "Hello")
         #expect(first["openedAt"]?.numberValue == 1_700_000_000_000)
         #expect(first["deletedAt"] == .null)
+        #expect(first["updatedAt"] == nil)
     }
 }
 

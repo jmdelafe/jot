@@ -42,7 +42,6 @@ export interface NoteListItem {
   searchText: string;
   pinned: boolean;
   openedAt: number;
-  updatedAt: number;
   deletedAt: number | null;
 }
 
