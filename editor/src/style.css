@@ -11,7 +11,14 @@
   --jot-card-bg: rgba(255, 255, 255, 0.62);
   --jot-specular: rgba(255, 255, 255, 0.95);
   --jot-code-bg: rgba(0, 0, 0, 0.06);
-  --jot-serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+}
+
+@font-face {
+  font-family: "Monaspace Argon";
+  src: url("./assets/MonaspaceArgonVar.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,9 +76,10 @@ body {
 #editor .ProseMirror {
   outline: none;
   min-height: 100%;
-  font-family: var(--jot-serif);
-  line-height: 1.75;
-  font-size: 17.5px;
+  font-family: "Monaspace Argon", ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  font-feature-settings: "calt" 1, "liga" 0;
+  line-height: 1.6;
+  font-size: 16px;
   caret-color: var(--jot-accent);
 }
 
@@ -138,7 +146,7 @@ body {
   border-radius: 5px;
   padding: 0.1em 0.38em;
   font-family: "SF Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.8em;
+  font-size: 0.9em;
 }
 
 #editor pre {
@@ -186,7 +194,7 @@ body {
 
 #editor .jot-markdown-source[data-block="code"] code {
   font-family: "SF Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.8em;
+  font-size: 0.9em;
 }
 
 #editor .jot-md-strong {
@@ -218,7 +226,7 @@ body {
   background: var(--jot-code-bg);
   padding: 0.1em 0;
   font-family: "SF Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.8em;
+  font-size: 0.9em;
 }
 
 #editor .jot-md-code-start {
@@ -525,7 +533,7 @@ body:has(.jot-palette:not([hidden])) #app {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--jot-serif);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   font-size: 15px;
   white-space: nowrap;
   overflow: hidden;

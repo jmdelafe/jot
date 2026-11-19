@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export function thirdPartyNotices(editorDirectory) {
   const { packages } = JSON.parse(readFileSync(join(editorDirectory, "package-lock.json"), "utf8"));
   const sections = [];
+  const monaspaceLicense = readFileSync(join(editorDirectory, "src/assets/Monaspace-OFL.txt"), "utf8").trim();
 
   for (const [packagePath, locked] of Object.entries(packages).sort(([a], [b]) => a.localeCompare(b))) {
     // Vite injects its module-preload runtime into the bundled editor.
@@ -31,6 +32,7 @@ export function thirdPartyNotices(editorDirectory) {
     sections.push(`${installed.name}@${installed.version}\n${"=".repeat(72)}\n${notices.join("\n\n")}`);
   }
 
+  sections.push(`Monaspace Argon Variable Webfont\n${"=".repeat(72)}\n${monaspaceLicense}`);
   return `Third-party notices for Jot's editor dependencies and Vite runtime.\nSome dependencies may be removed by bundling.\n\n${sections.join("\n\n")}\n`;
 }
 

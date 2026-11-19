@@ -11,6 +11,9 @@ let packages;
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "jot-notices-"));
   packages = { "": { name: "test-editor" } };
+  const fontAssets = join(directory, "src/assets");
+  mkdirSync(fontAssets, { recursive: true });
+  writeFileSync(join(fontAssets, "Monaspace-OFL.txt"), "Monaspace font license");
 });
 
 afterEach(() => rmSync(directory, { recursive: true, force: true }));
@@ -42,6 +45,8 @@ test("includes scoped and nested production licenses and notices, plus Vite's ru
   for (const text of ["@scope/editor@1.0.0", "Editor license", "Attribution", "parser@1.0.0", "Parser license", "Vite license"]) {
     assert.ok(output.includes(text), text);
   }
+  assert.ok(output.includes("Monaspace Argon Variable Webfont"));
+  assert.ok(output.includes("Monaspace font license"));
   assert.ok(!output.includes("test-runner"));
 });
 
