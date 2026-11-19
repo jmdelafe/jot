@@ -59,7 +59,9 @@ debug build; it does not update or restart the packaged `build/Jot.app`.
 
 - **Open/hide:** press **⌥⌘N**, click the menu bar icon, or launch Jot again.
   ⌥-click the icon for a new note; right-click it for a menu.
-- **Window:** translucent dark glass that looks the same focused or not, independent of the system appearance.
+- **Window:** translucent glass that follows macOS Light, Dark, or Auto appearance,
+  updating while the note is open. The background stays quiet when focus changes,
+  with a stronger surface when Reduce Transparency or Increase Contrast is enabled.
   Drag the title bar to move it. The note title is centered and
   faint; when the pointer is over the window it fades out and the traffic
   lights and the ⌘, list, and + buttons (Actions, Browse Notes, New Note)

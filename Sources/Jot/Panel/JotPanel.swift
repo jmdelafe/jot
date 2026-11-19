@@ -18,7 +18,6 @@ final class JotPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        appearance = NSAppearance(named: .darkAqua)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         titlebarAppearsTransparent = true
@@ -61,7 +60,15 @@ final class JotPanel: NSPanel {
     /// The pointer may already be over the panel when it is shown, which
     /// produces no enter event.
     func syncChromeWithPointer(animated: Bool = true) {
+        alignCloseButton()
         setChromeVisible(frame.contains(NSEvent.mouseLocation), animated: animated)
+    }
+
+    func alignCloseButton() {
+        guard let button = standardWindowButton(.closeButton), let titlebar = button.superview else { return }
+        titlebar.layoutSubtreeIfNeeded()
+        let center = titlebar.convert(NSPoint(x: 18, y: frame.height - 18), from: nil)
+        button.setFrameOrigin(NSPoint(x: center.x - button.frame.width / 2, y: center.y - button.frame.height / 2))
     }
 
     override func mouseEntered(with event: NSEvent) { setChromeVisible(true, animated: true) }
@@ -98,6 +105,14 @@ final class JotPanel: NSPanel {
             return
         }
         super.keyDown(with: event)
+    }
+}
+
+final class JotGlassView: NSGlassEffectView {
+    override func layout() {
+        super.layout()
+        // AppKit can restore the standard button position during window layout.
+        (window as? JotPanel)?.alignCloseButton()
     }
 }
 

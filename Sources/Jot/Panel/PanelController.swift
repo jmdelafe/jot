@@ -12,6 +12,7 @@ final class PanelController: NSObject {
     private let panel: JotPanel
     private let bridge: EditorBridge
     private let library: NotesLibrary
+    private let vibrancy = NSVisualEffectView()
     private var currentNoteID: UUID?
     private var isEditorReady = false
     private var pendingFocusAfterReady = false
@@ -34,7 +35,14 @@ final class PanelController: NSObject {
         self.bridge = EditorBridge()
         super.init()
 
-        panel.contentView = Self.makeGlassContentView(embedding: bridge.webView, title: titleLabel)
+        panel.contentView = Self.makeGlassContentView(embedding: bridge.webView, title: titleLabel, vibrancy: vibrancy)
+        updateGlassAccessibility()
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(updateGlassAccessibility),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil
+        )
         let accessory = makeTitlebarAccessory()
         panel.addTitlebarAccessoryViewController(accessory)
         panel.revealOnHover([accessory.view], hiding: [titleLabel])
@@ -273,6 +281,13 @@ final class PanelController: NSObject {
 
     // MARK: - Window chrome
 
+    @objc private func updateGlassAccessibility() {
+        let workspace = NSWorkspace.shared
+        let needsOpaqueBackground = workspace.accessibilityDisplayShouldReduceTransparency
+            || workspace.accessibilityDisplayShouldIncreaseContrast
+        vibrancy.alphaValue = needsOpaqueBackground ? 1 : 0.42
+    }
+
     /// Grows or shrinks the panel to fit its content, keeping the top edge
     /// fixed, like Raycast Notes. Bounded so it never covers the screen.
     private func applyPreferredHeight() {
@@ -326,18 +341,15 @@ final class PanelController: NSObject {
     @objc private func handleNotesButton() { bridge.showNotes() }
     @objc private func handleNewNoteButton() { newNote() }
 
-    /// Wraps the web view in an always-active popover vibrancy layer inside
-    /// clear Liquid Glass. The vibrancy gives a translucent, readable
-    /// surface that looks identical whether or not the panel is key (plain
-    /// glass brightens when unfocused), and the clear glass on top adds the
-    /// system's edge lighting. The web view stays transparent (see
-    /// `EditorBridge`) so the material shows through behind the text.
-    private static func makeGlassContentView(embedding webView: NSView, title: NSTextField) -> NSView {
+    /// Clear Liquid Glass supplies the edge lighting, with an always-active
+    /// popover material behind the content to keep focus changes quiet.
+    /// Only that background is faded; the transparent web view and title
+    /// remain fully opaque and inherit the system appearance.
+    private static func makeGlassContentView(embedding webView: NSView, title: NSTextField, vibrancy: NSVisualEffectView) -> NSView {
         let cornerRadius: CGFloat = 18
-        let glass = NSGlassEffectView()
+        let glass = JotGlassView()
         glass.style = .clear
         glass.cornerRadius = cornerRadius
-        let vibrancy = NSVisualEffectView()
         vibrancy.material = .popover
         vibrancy.blendingMode = .behindWindow
         vibrancy.state = .active
@@ -345,15 +357,15 @@ final class PanelController: NSObject {
         vibrancy.layer?.cornerRadius = cornerRadius
         vibrancy.layer?.cornerCurve = .continuous
         vibrancy.layer?.masksToBounds = true
-        glass.contentView = vibrancy
         let content = NSView()
-        content.translatesAutoresizingMaskIntoConstraints = false
-        vibrancy.addSubview(content)
+        glass.contentView = content
+        vibrancy.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(vibrancy)
         NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: vibrancy.topAnchor),
-            content.leadingAnchor.constraint(equalTo: vibrancy.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: vibrancy.trailingAnchor),
-            content.bottomAnchor.constraint(equalTo: vibrancy.bottomAnchor),
+            vibrancy.topAnchor.constraint(equalTo: content.topAnchor),
+            vibrancy.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            vibrancy.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            vibrancy.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         webView.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(webView)
