@@ -341,14 +341,14 @@ final class PanelController: NSObject {
     @objc private func handleNotesButton() { bridge.showNotes() }
     @objc private func handleNewNoteButton() { newNote() }
 
-    /// Clear Liquid Glass supplies the edge lighting, with an always-active
-    /// popover material behind the content to keep focus changes quiet.
+    /// Regular Liquid Glass gives the content a more opaque fill, with an
+    /// always-active popover material behind it to keep focus changes quiet.
     /// Only that background is faded; the transparent web view and title
     /// remain fully opaque and inherit the system appearance.
     private static func makeGlassContentView(embedding webView: NSView, title: NSTextField, vibrancy: NSVisualEffectView) -> NSView {
         let cornerRadius: CGFloat = 18
         let glass = JotGlassView()
-        glass.style = .clear
+        glass.style = .regular
         glass.cornerRadius = cornerRadius
         vibrancy.material = .popover
         vibrancy.blendingMode = .behindWindow

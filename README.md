@@ -38,6 +38,7 @@ Only Apple Silicon downloads are provided; you can also build from source.
 | **⇧⌘P** | Pin or unpin the current or selected note |
 | **⌃X** | Delete a note from the browser or actions |
 | **⌘L** | Edit a link |
+| **⌘-click** | Open a link |
 | **Esc** | Close a palette or popover, or hide Jot |
 
 You can also click the menu bar icon to show or hide Jot, ⌥-click for a new

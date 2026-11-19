@@ -1,6 +1,7 @@
 import { Editor, InputRule, getHTMLFromFragment } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 import { DOMParser } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -80,6 +81,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
     autofocus: false,
     editable: false,
     content: EMPTY_DOCUMENT,
+    editorProps: { handleDOMEvents: { mousedown: openLinkOnCommandClick, click: keepLinkClickInEditor } },
     extensions: [
       StarterKit.configure({
         undoRedo: false,
@@ -113,9 +115,8 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       if (noteId === null) return;
       bridge.contentChanged(noteId, renderedDocument(current).toJSON() as JSONValue);
     },
-    onCreate({ editor: current }) {
+    onCreate() {
       bridge.ready();
-      installExternalLinkHandling(current);
     },
     onDestroy() {
       linkPopover.destroy();
@@ -210,17 +211,40 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
   };
 }
 
+const sourceLink = /\[[^\]\n]*\]\(([^()\s]*)(?:\s+"[^"\n]*")?\)|(https?:\/\/[^\s<>()]+)/gu;
+
+/** The URL under a click: a rendered link, or link Markdown on the line being edited. */
+function linkAt(view: EditorView, event: MouseEvent): string | null {
+  const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+  if (anchor) return anchor.href;
+  const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
+  if (!found) return null;
+  const $pos = view.state.doc.resolve(found.pos);
+  for (const { 0: match, 1: target, 2: bare, index } of $pos.parent.textContent.matchAll(sourceLink)) {
+    if ($pos.parentOffset >= index && $pos.parentOffset <= index + match.length) return target ?? bare;
+  }
+  return null;
+}
+
+/**
+ * ⌘-click hands the URL to native code, which opens it via NSWorkspace.
+ * Handled on mousedown, before the caret moves and turns the line into
+ * Markdown source.
+ */
+function openLinkOnCommandClick(view: EditorView, event: MouseEvent): boolean {
+  if (!event.metaKey || event.button !== 0) return false;
+  const url = linkAt(view, event);
+  if (!url) return false;
+  event.preventDefault();
+  bridge.openLink(url);
+  return true;
+}
+
 /**
  * Links must never navigate the embedded WKWebView (there is no browser
- * chrome to go "back" from). Intercept clicks on rendered links and hand the
- * URL to native code, which opens it via NSWorkspace.
+ * chrome to go "back" from); a plain click just edits the link.
  */
-function installExternalLinkHandling(editor: Editor): void {
-  editor.view.dom.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement | null;
-    const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
-    if (!anchor) return;
-    event.preventDefault();
-    bridge.openLink(anchor.href);
-  });
+function keepLinkClickInEditor(_view: EditorView, event: MouseEvent): boolean {
+  if ((event.target as Element | null)?.closest?.("a[href]")) event.preventDefault();
+  return false;
 }
