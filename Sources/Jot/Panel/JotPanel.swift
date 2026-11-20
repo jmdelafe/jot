@@ -92,6 +92,18 @@ final class JotPanel: NSPanel {
         onEscape?()
     }
 
+    /// Jot has no main menu (it's an accessory app), so the standard
+    /// Cmd-Q key equivalent must be handled here.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.keyCode == kVK_ANSI_Q,
+            event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command
+        {
+            NSApp.terminate(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.keyCode == kVK_Escape {
             onEscape?()
@@ -118,3 +130,4 @@ final class JotGlassView: NSGlassEffectView {
 
 private let kVK_Escape: UInt16 = 0x35
 private let kVK_ANSI_V: UInt16 = 0x09
+private let kVK_ANSI_Q: UInt16 = 0x0C
