@@ -45,6 +45,7 @@ bundle: editor
 	cp "$$bin_dir/$(APP_NAME)" "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)"; \
 	cp -R "$$resource_bundle" "$(APP_BUNDLE)/Contents/Resources/"
 	cp Packaging/Info.plist "$(APP_BUNDLE)/Contents/Info.plist"
+	cp Packaging/AppIcon.icns "$(APP_BUNDLE)/Contents/Resources/AppIcon.icns"
 	cp LICENSE "$(APP_BUNDLE)/Contents/Resources/LICENSE.txt"
 	node scripts/third-party-notices.mjs > "$(APP_BUNDLE)/Contents/Resources/THIRD_PARTY_NOTICES.txt"
 	@resources="$(APP_BUNDLE)/Contents/Resources/$(APP_NAME)_$(APP_NAME).bundle"; \

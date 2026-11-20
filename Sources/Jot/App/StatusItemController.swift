@@ -16,13 +16,49 @@ final class StatusItemController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: "Jot")
-            button.image?.isTemplate = true
+            button.image = Self.menuBarImage()
             button.toolTip = "Jot — click to open, ⌥-click for a new note"
             button.target = self
             button.action = #selector(handleClick)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+    }
+
+    private static func menuBarImage() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            NSColor.black.set()
+            let note = NSBezierPath()
+            note.lineWidth = 1.2
+            note.lineJoinStyle = .round
+            note.move(to: NSPoint(x: 3, y: 1.5))
+            note.line(to: NSPoint(x: 12, y: 1.5))
+            note.line(to: NSPoint(x: 16, y: 5.5))
+            note.line(to: NSPoint(x: 16, y: 14.5))
+            note.curve(to: NSPoint(x: 14.5, y: 16), controlPoint1: NSPoint(x: 16, y: 15.3), controlPoint2: NSPoint(x: 15.3, y: 16))
+            note.line(to: NSPoint(x: 3.5, y: 16))
+            note.curve(to: NSPoint(x: 2, y: 14.5), controlPoint1: NSPoint(x: 2.7, y: 16), controlPoint2: NSPoint(x: 2, y: 15.3))
+            note.line(to: NSPoint(x: 2, y: 3))
+            note.curve(to: NSPoint(x: 3, y: 1.5), controlPoint1: NSPoint(x: 2, y: 2.2), controlPoint2: NSPoint(x: 2.4, y: 1.5))
+            note.close()
+            note.move(to: NSPoint(x: 12, y: 1.5))
+            note.line(to: NSPoint(x: 12, y: 5.5))
+            note.line(to: NSPoint(x: 16, y: 5.5))
+            note.stroke()
+
+            let lines = NSBezierPath()
+            lines.lineWidth = 1.4
+            lines.lineCapStyle = .round
+            lines.move(to: NSPoint(x: 5, y: 11.7))
+            lines.line(to: NSPoint(x: 12.5, y: 13))
+            lines.move(to: NSPoint(x: 5, y: 8.6))
+            lines.line(to: NSPoint(x: 12.5, y: 9.9))
+            lines.stroke()
+            NSBezierPath(ovalIn: NSRect(x: 4.4, y: 5, width: 1.7, height: 1.7)).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Jot"
+        return image
     }
 
     @objc private func handleClick() {
