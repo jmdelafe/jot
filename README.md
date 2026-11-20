@@ -1,14 +1,35 @@
-# Jot
+<h1 align="center">Jot</h1>
 
-**A little space for your thoughts, right in the macOS menu bar.**
+<p align="center"><strong>A little space for your thoughts.</strong><br>
+A quiet, floating notepad that lives in your macOS menu bar.</p>
 
-Press **⌥⌘N** to open a floating note, write something down, and get back to
-what you were doing. Jot saves automatically and works offline—no account, sync,
-or Dock icon required.
+<p align="center">
+  <a href="https://github.com/jmdelafe/jot/releases"><strong>Download Jot →</strong></a>
+  &nbsp;·&nbsp; <a href="#get-started">Get started</a>
+  &nbsp;·&nbsp; <a href="LICENSE">MIT licensed</a>
+</p>
 
-**macOS 26+** · **Apple Silicon downloads** · [Download Jot](https://github.com/jmdelafe/jot/releases) · [MIT License](LICENSE)
+<p align="center"><sub>macOS 26+ · Apple Silicon · Early access</sub></p>
 
-## Install a prebuilt app
+| Light | Dark |
+| :---: | :---: |
+| <img src="docs/screenshots/jot-light.png" alt="Jot's light editor in a floating window, with a sample checklist" width="480"> | <img src="docs/screenshots/jot-dark.png" alt="The same floating note in dark appearance" width="480"> |
+
+<p align="center"><sub>Light and dark previews with illustrated window chrome and desktop backgrounds. Jot follows your Mac's appearance.</sub></p>
+
+## Catch the thought. Keep your flow.
+
+Press **⌥⌘N**, jot it down, and get back to what you were doing.
+Ideas, tiny checklists, meeting notes—without another app taking over your screen.
+
+- **Always a shortcut away.** A floating window, no Dock icon, and a keyboard-first workflow.
+- **More than plain text.** Markdown shortcuts, checklists, links, and a selection formatting toolbar.
+- **Yours, on your Mac.** Automatic saving, offline use, and no account, sync, or telemetry.
+
+Search your notes, pin the ones you reach for, and copy or export as Markdown,
+HTML, or plain text when you're ready to take them elsewhere.
+
+## Get started
 
 1. Download `Jot-macos-arm64.zip` and `checksums.txt` from [Releases](https://github.com/jmdelafe/jot/releases).
 2. Verify the download from the folder containing both files:
@@ -17,17 +38,23 @@ or Dock icon required.
    shasum -a 256 -c checksums.txt
    ```
 
-3. Unzip it, move `Jot.app` to `/Applications`, and open it.
+3. Unzip it, move `Jot.app` to `/Applications`, and open it. Press **⌥⌘N** to write your first note.
 
-Downloads are **ad-hoc signed, not notarized or Developer ID signed**. If macOS
-blocks the first launch and you trust the download, open **System Settings →
-Privacy & Security → Open Anyway** after attempting to launch it. Do not
-disable Gatekeeper globally.
+> **First launch:** downloads are **ad-hoc signed, not notarized or Developer ID signed**.
+> If macOS blocks the first launch and you trust the download, open **System Settings →
+> Privacy & Security → Open Anyway** after attempting to launch it.
+> Do not disable Gatekeeper globally.
 
 Before upgrading, quit Jot and [back up your notes](#data-privacy-and-recovery).
 Only Apple Silicon downloads are provided; you can also build from source.
 
-## Using Jot
+## Make yourself at home
+
+**⌘N** starts a note. **⌘P** finds one. **⌘K** opens actions.
+**Esc** gets Jot out of your way.
+
+<details>
+<summary><strong>All shortcuts and writing tips</strong></summary>
 
 | Shortcut | Action |
 | --- | --- |
@@ -61,7 +88,15 @@ appear first. In the browser, **⇧⌘P** pins and **⌃X** deletes the selected
 note. Deleted notes can be restored from *Recently Deleted* for 60 days.
 Empty notes are reused or discarded when you leave them.
 
+</details>
+
 ## Data, privacy, and recovery
+
+Your notes stay local. No account, sync, or telemetry—and no encryption added
+by Jot. Their protection depends on your macOS account and disk settings.
+
+<details>
+<summary><strong>Storage, backups, and recovering notes</strong></summary>
 
 Notes stay on your Mac as JSON files in the sandbox container:
 
@@ -69,10 +104,8 @@ Notes stay on your Mac as JSON files in the sandbox container:
 ~/Library/Containers/com.jmdelafe.jot/Data/Library/Application Support/Jot/Notes/
 ```
 
-Jot has no account, sync, or telemetry. Notes are not encrypted by Jot; their
-protection depends on your macOS account and disk settings. Links open in your
-default browser. Notes from the earlier single-note version are imported
-automatically.
+Links open in your default browser. Notes from the earlier single-note version
+are imported automatically.
 
 **Back up:** quit Jot and copy the entire `Jot` application-support folder,
 including `Notes/index.json` and every note file. To restore, quit Jot, keep a
@@ -92,7 +125,12 @@ The app is sandboxed. Its network client entitlement lets WebKit initialize;
 the editor loads bundled content and works offline. The user-selected
 read-write entitlement is used by the export save panel.
 
+</details>
+
 ## Install from source
+
+<details>
+<summary><strong>Build and run Jot on your Mac</strong></summary>
 
 You need macOS 26+, Swift 6.2+ (Command Line Tools or Xcode), and Node.js 24+
 with npm.
@@ -113,7 +151,15 @@ and replace it.
 After code changes, quit Jot and run `make run` again. `make build` builds the
 debug app; it does not update or restart `build/Jot.app`.
 
+</details>
+
 ## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development, dependency updates,
+reporting problems, and the release checklist.
+
+<details>
+<summary><strong>Build commands and releases</strong></summary>
 
 | Command | Purpose |
 | --- | --- |
@@ -130,9 +176,6 @@ Command Line Tools test-driver issue. `make test-swift` uses the native build
 backend and a separate `.build/testing` cache. If `tsc` or `vite` is missing,
 run `make bootstrap`.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development, dependency updates,
-reporting problems, and the release checklist.
-
 ### Releases
 
 Versions follow [Semantic Versioning](https://semver.org). The numeric version
@@ -146,6 +189,8 @@ make release VERSION=0.1.0-alpha.1
 
 This validates and pushes the tag. GitHub Actions runs CI and publishes the
 app ZIP, checksums, and source archives. See the [release checklist](CONTRIBUTING.md#alpha-release-checklist) before releasing.
+
+</details>
 
 ## License
 
