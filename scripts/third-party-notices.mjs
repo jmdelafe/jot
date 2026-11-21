@@ -32,7 +32,7 @@ export function thirdPartyNotices(editorDirectory) {
     sections.push(`${installed.name}@${installed.version}\n${"=".repeat(72)}\n${notices.join("\n\n")}`);
   }
 
-  sections.push(`Monaspace Argon Variable Webfont\n${"=".repeat(72)}\n${monaspaceLicense}`);
+  sections.push(`Monaspace Argon and Neon Variable Webfonts\n${"=".repeat(72)}\n${monaspaceLicense}`);
   return `Third-party notices for Jot's editor dependencies and Vite runtime.\nSome dependencies may be removed by bundling.\n\n${sections.join("\n\n")}\n`;
 }
 
