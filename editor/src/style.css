@@ -21,6 +21,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Monaspace Neon";
+  src: url("./assets/MonaspaceNeonVar.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --jot-text: rgba(255, 255, 255, 0.92);
@@ -145,7 +153,7 @@ body {
   background: var(--jot-code-bg);
   border-radius: 5px;
   padding: 0.1em 0.38em;
-  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-family: "Monaspace Neon", ui-monospace, Menlo, monospace;
   font-size: 0.9em;
 }
 
@@ -193,7 +201,7 @@ body {
 }
 
 #editor .jot-markdown-source[data-block="code"] code {
-  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-family: "Monaspace Neon", ui-monospace, Menlo, monospace;
   font-size: 0.9em;
 }
 
@@ -225,7 +233,7 @@ body {
 #editor .jot-md-code {
   background: var(--jot-code-bg);
   padding: 0.1em 0;
-  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-family: "Monaspace Neon", ui-monospace, Menlo, monospace;
   font-size: 0.9em;
 }
 

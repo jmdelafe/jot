@@ -45,7 +45,7 @@ test("includes scoped and nested production licenses and notices, plus Vite's ru
   for (const text of ["@scope/editor@1.0.0", "Editor license", "Attribution", "parser@1.0.0", "Parser license", "Vite license"]) {
     assert.ok(output.includes(text), text);
   }
-  assert.ok(output.includes("Monaspace Argon Variable Webfont"));
+  assert.ok(output.includes("Monaspace Argon and Neon Variable Webfonts"));
   assert.ok(output.includes("Monaspace font license"));
   assert.ok(!output.includes("test-runner"));
 });
