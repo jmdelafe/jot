@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DOMParser } from "@tiptap/pm/model";
 import { createEditor, type JotEditor } from "../src/editor";
 import { renderedDocument, renderedState } from "../src/liveMarkdown";
 
@@ -100,6 +101,26 @@ describe("clipboard paste", () => {
     expect(jot.serialize("html")).toContain("<h2>Title</h2><ul><li><p><strong>bold</strong> <em>italic</em>");
     expect(jot.serialize("html")).toContain('href="https://example.com"');
     expect(jot.serialize("html")).not.toContain("markdownSource");
+  });
+
+  it("strips resource-loading HTML before parsing a formatted paste", () => {
+    const parser = DOMParser.fromSchema(jot.editor.schema);
+    const parseSlice = vi.spyOn(parser, "parseSlice");
+    const fromSchema = vi.spyOn(DOMParser, "fromSchema").mockReturnValue(parser);
+    try {
+      jot.pasteFormatted({
+        html: '<p><img src="https://example.com/image"><iframe src="https://example.com"></iframe><a href="https://example.com" ping="https://example.com">link</a><span style="background:url(https://example.com)">styled</span></p>',
+        text: "link styled"
+      });
+
+      const container = parseSlice.mock.calls[0][0] as HTMLElement;
+      expect(container.querySelector("img, iframe")).toBeNull();
+      expect(container.querySelector("[src], [ping], [style]")).toBeNull();
+      expect(container.querySelector('a[href="https://example.com"]')).not.toBeNull();
+    } finally {
+      fromSchema.mockRestore();
+      parseSlice.mockRestore();
+    }
   });
 
   it("replaces the selection with rich text and can undo it in one step", () => {

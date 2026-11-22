@@ -181,8 +181,25 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
           insertPlainText(editor, text);
           return;
         }
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        template.content.querySelectorAll(
+          "applet, audio, base, bgsound, embed, frame, frameset, iframe, img, link, math, meta, object, script, source, style, svg, track, video"
+        ).forEach(element => element.remove());
+        template.content.querySelectorAll("*").forEach(element => {
+          for (const attribute of Array.from(element.attributes)) {
+            const name = attribute.localName.toLowerCase();
+            if (
+              /^(?:action|background|data|formaction|ping|poster|src|srcdoc|srcset|style)$/u.test(name) ||
+              name.startsWith("on") ||
+              (name === "href" && element.localName !== "a")
+            ) {
+              element.removeAttribute(attribute.name);
+            }
+          }
+        });
         const container = document.createElement("div");
-        container.innerHTML = html;
+        container.append(template.content);
         const slice = DOMParser.fromSchema(editor.schema).parseSlice(container, {
           preserveWhitespace: true,
           context: state.selection.$from
