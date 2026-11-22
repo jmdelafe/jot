@@ -1,3 +1,5 @@
+<p align="center"><img src="Packaging/AppIcon.svg" alt="Jot app icon: a yellow sticky note with two pen strokes" width="128" height="128"></p>
+
 <h1 align="center">Jot</h1>
 
 <p align="center"><strong>A little space for your thoughts.</strong><br>
@@ -11,11 +13,9 @@ A quiet, floating notepad that lives in your macOS menu bar.</p>
 
 <p align="center"><sub>macOS 26+ · Apple Silicon · Early access</sub></p>
 
-| Light | Dark |
+| Light preview | Dark preview |
 | :---: | :---: |
-| <img src="docs/screenshots/jot-light.png" alt="Jot's light editor in a floating window, with a sample checklist" width="480"> | <img src="docs/screenshots/jot-dark.png" alt="The same floating note in dark appearance" width="480"> |
-
-<p align="center"><sub>Light and dark previews with illustrated window chrome and desktop backgrounds. Jot follows your Mac's appearance.</sub></p>
+| <img src="docs/screenshots/jot-light.png" alt="A little room to think in an illustrated floating window: a checklist, two walking prompts, a Cloud Atlas link, a short quote, and JavaScript to pick a prompt" width="480"> | <img src="docs/screenshots/jot-dark.png" alt="The same walking prompts, quote, and code in Jot’s dark editor, with an illustrated window and desktop" width="480"> |
 
 ## Catch the thought. Keep your flow.
 
@@ -40,7 +40,8 @@ HTML, or plain text when you're ready to take them elsewhere.
 
 3. Unzip it, move `Jot.app` to `/Applications`, and open it. Press **⌥⌘N** to write your first note.
 
-> **First launch:** downloads are **ad-hoc signed, not notarized or Developer ID signed**.
+> [!WARNING]
+> Downloads are **ad-hoc signed, not notarized or Developer ID signed**.
 > If macOS blocks the first launch and you trust the download, open **System Settings →
 > Privacy & Security → Open Anyway** after attempting to launch it.
 > Do not disable Gatekeeper globally.
@@ -154,6 +155,9 @@ debug app; it does not update or restart `build/Jot.app`.
 </details>
 
 ## Development
+
+> [!NOTE]
+> Jot is being built with the help of AI coding agents.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development, dependency updates,
 reporting problems, and the release checklist.
