@@ -63,6 +63,7 @@ Only Apple Silicon downloads are provided; you can also build from source.
 | **⌘N** | New note |
 | **⌘P** | Browse and search notes |
 | **⌘K** | Open actions |
+| **⌘F** | Find in the current note (**↩** / **⌘G** next, **⇧↩** / **⇧⌘G** previous) |
 | **⇧⌘P** | Pin or unpin the current or selected note |
 | **⌃X** | Delete a note from the browser or actions |
 | **⌘L** | Edit a link |

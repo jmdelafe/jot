@@ -15,6 +15,7 @@ import type { ClipboardContent, ExportFormat, JSONValue, NotePayload } from "./p
 import { LiveMarkdown, renderedDocument, renderedState, withRenderedMarkdown } from "./liveMarkdown";
 import { MarkdownHistory, markdownHistoryKey } from "./markdownHistory";
 import { PlainTextPaste, insertPlainText } from "./plainPaste";
+import { FindInNote } from "./findInNote";
 
 export interface JotEditor {
   editor: Editor;
@@ -109,6 +110,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       LiveMarkdown,
       MarkdownHistory,
       PlainTextPaste,
+      FindInNote,
       createShortcutsExtension(() => linkPopover.open(editorRef.current!))
     ],
     onUpdate({ editor: current }) {
