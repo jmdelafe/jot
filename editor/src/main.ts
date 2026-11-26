@@ -5,6 +5,7 @@ import { Palette, type PaletteItem, type PaletteMode } from "./palette";
 import { notesMode } from "./notesBrowser";
 import { installAutosize } from "./autosize";
 import { bridge } from "./bridge";
+import { FindBar } from "./findInNote";
 import type { ExportFormat, NativeBridge, NotePayload, NotesPayload, PastePayload } from "./protocol";
 
 const editorMount = document.getElementById("editor");
@@ -23,6 +24,7 @@ const autosize = installAutosize(editorMount, () => palette.isOpen);
 jot.editor.on("update", () => autosize.schedule());
 
 mountFormatBar(formatBarMount, jot.editor, jot.linkPopover);
+const findBar = new FindBar(jot.editor);
 
 const toast = document.createElement("div");
 toast.className = "jot-toast";
@@ -113,11 +115,13 @@ const actionsMode: PaletteMode = {
 };
 
 function showNotes(): void {
+  findBar.close(false);
   bridge.requestNotes();
   palette.open(notesMode(() => notes, noteActions), focusEditor);
 }
 
 function showActions(): void {
+  findBar.close(false);
   bridge.requestNotes();
   palette.open(actionsMode, focusEditor);
 }
@@ -140,11 +144,17 @@ window.addEventListener("keydown", event => {
   let handled = true;
   if (!event.shiftKey && key === "n") {
     palette.close(false);
+    findBar.close(false);
     bridge.newNote();
   } else if (!event.shiftKey && key === "p") {
     togglePalette("notes");
   } else if (!event.shiftKey && key === "k") {
     togglePalette("actions");
+  } else if (!event.shiftKey && key === "f" && !palette.isOpen) {
+    jot.linkPopover.close(false);
+    findBar.open();
+  } else if (key === "g" && findBar.isOpen) {
+    findBar.step(event.shiftKey ? -1 : 1);
   } else if (!event.shiftKey && key === "w") {
     bridge.hide();
   } else if (!event.shiftKey && key === "c" && !palette.isOpen && inEditor) {

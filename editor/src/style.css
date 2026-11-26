@@ -323,6 +323,7 @@ body {
 /* Frosted card shared by the floating surfaces. */
 #format-bar,
 .jot-link-popover,
+.jot-find-bar,
 .jot-toast {
   background: var(--jot-card-bg);
   -webkit-backdrop-filter: blur(30px) saturate(1.8);
@@ -642,4 +643,78 @@ body:has(.jot-palette:not([hidden])) #app {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ⌘F: floats in the top corner so the note doesn't move while searching. */
+.jot-find-bar {
+  position: fixed;
+  top: 6px;
+  right: 8px;
+  z-index: 850;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 4px;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 12px;
+  animation: jot-pill-in 0.12s ease-out;
+}
+
+.jot-find-bar[hidden] {
+  display: none;
+}
+
+.jot-find-bar input {
+  font: inherit;
+  color: var(--jot-text);
+  background: transparent;
+  border: 1px solid var(--jot-separator);
+  border-radius: 6px;
+  padding: 3px 6px;
+  width: 160px;
+  outline: none;
+}
+
+.jot-find-bar input:focus {
+  border-color: var(--jot-text-faint);
+}
+
+.jot-find-count {
+  min-width: 0;
+  padding: 0 6px;
+  color: var(--jot-text-muted);
+  white-space: nowrap;
+}
+
+.jot-find-count:empty {
+  display: none;
+}
+
+.jot-find-bar button {
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  color: var(--jot-text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.jot-find-bar button:hover {
+  background: var(--jot-surface-hover);
+  color: var(--jot-text);
+}
+
+.jot-find-match {
+  background: rgba(255, 196, 0, 0.35);
+  border-radius: 2px;
+}
+
+.jot-find-match-current {
+  background: rgba(255, 150, 0, 0.75);
 }

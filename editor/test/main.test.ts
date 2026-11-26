@@ -124,4 +124,21 @@ describe("clipboard shortcuts", () => {
     }));
     expect(jot.serialize("plainText")).toBe("");
   });
+
+  it("opens find with Command-F and steps matches with Command-G", () => {
+    jot.editor.commands.setContent("<p>one One</p>");
+    jot.editor.commands.setTextSelection(1);
+    expect(key("f").defaultPrevented).toBe(true);
+    const bar = document.querySelector<HTMLElement>(".jot-find-bar")!;
+    const input = bar.querySelector("input")!;
+    expect(bar.hidden).toBe(false);
+    expect(document.activeElement).toBe(input);
+    input.value = "one";
+    input.dispatchEvent(new Event("input"));
+    expect(bar.querySelector(".jot-find-count")!.textContent).toBe("1 of 2");
+    expect(key("g", false, input).defaultPrevented).toBe(true);
+    expect(bar.querySelector(".jot-find-count")!.textContent).toBe("2 of 2");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(bar.hidden).toBe(true);
+  });
 });
