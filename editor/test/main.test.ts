@@ -91,6 +91,24 @@ describe("clipboard shortcuts", () => {
     expect(postMessage).not.toHaveBeenCalled();
   });
 
+  it("cuts selected note text through the native clipboard event", () => {
+    jot.editor.commands.setContent("<p>hello world</p>");
+    jot.editor.commands.setTextSelection({ from: 1, to: 6 });
+    postMessage.mockClear();
+    expect(key("x").defaultPrevented).toBe(false);
+
+    const clipboard = { clearData: vi.fn(), setData: vi.fn() };
+    const event = new Event("cut", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", { value: clipboard });
+    jot.editor.view.dom.dispatchEvent(event);
+
+    expect(clipboard.setData).toHaveBeenCalledWith("text/plain", "hello");
+    expect(jot.serialize("plainText")).toBe(" world");
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "contentChanged", noteId: "note-1" }));
+    jot.editor.commands.undo();
+    expect(jot.serialize("plainText")).toBe("hello world");
+  });
+
   it("does not hijack clipboard shortcuts in text inputs", () => {
     const input = document.createElement("input");
     document.body.appendChild(input);
