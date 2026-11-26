@@ -1,0 +1,21 @@
+version: 2
+
+# Version updates. Security updates are enabled separately in the repository
+# settings and are not affected by the grouping or limits below.
+updates:
+  - package-ecosystem: npm
+    directory: /editor
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      editor-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
