@@ -116,6 +116,13 @@ final class JotPanel: NSPanel {
         {
             return
         }
+        if event.keyCode == kVK_ANSI_X,
+            event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                .intersection([.command, .shift, .option, .control]) == .command,
+            NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: self)
+        {
+            return
+        }
         super.keyDown(with: event)
     }
 }
@@ -130,4 +137,5 @@ final class JotGlassView: NSGlassEffectView {
 
 private let kVK_Escape: UInt16 = 0x35
 private let kVK_ANSI_V: UInt16 = 0x09
+private let kVK_ANSI_X: UInt16 = 0x07
 private let kVK_ANSI_Q: UInt16 = 0x0C

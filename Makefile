@@ -24,6 +24,8 @@ test-editor:
 ## Keep its cache separate from the app's default build backend.
 test-swift:
 	swift run --build-system native --scratch-path .build/testing JotTestRunner
+	swiftc Sources/Jot/Panel/JotPanel.swift scripts/panel-shortcuts-test.swift -o .build/testing/panel-shortcuts-test
+	.build/testing/panel-shortcuts-test
 
 test-release:
 	scripts/check-release-tag-test.sh

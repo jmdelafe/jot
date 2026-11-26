@@ -79,8 +79,8 @@ title bar for the Actions, Browse Notes, and New Note buttons.
 formatted text reveals editable Markdown; lists remain rendered as you edit.
 
 **Copy and paste your way.** **⌘C** copies selected text as plain text;
-**⇧⌘C** copies with formatting, or copies the whole note if nothing is
-selected. **⌘V** pastes plain text in the surrounding style; **⇧⌘V** keeps
+**⌘X** cuts the selection; **⇧⌘C** copies with formatting, or copies the whole
+note if nothing is selected. **⌘V** pastes plain text in the surrounding style; **⇧⌘V** keeps
 supported formatting. Paste a URL over selected text to create a link. Use
 **⌘K** to copy or export as Markdown, HTML, or plain text.
 
@@ -177,8 +177,8 @@ reporting problems, and the release checklist.
 
 Swift tests use `JotTestRunner`, not `swift test`, to work around a
 Command Line Tools test-driver issue. `make test-swift` uses the native build
-backend and a separate `.build/testing` cache. If `tsc` or `vite` is missing,
-run `make bootstrap`.
+backend and a separate `.build/testing` cache, and checks panel shortcuts with
+AppKit. If `tsc` or `vite` is missing, run `make bootstrap`.
 
 ### Releases
 
