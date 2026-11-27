@@ -5,7 +5,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
   # Lets the Release workflow gate publishing on these checks.
   workflow_call:
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 # Keep this group distinct from Release when CI is called as a reusable workflow.
-# Supersede stale runs on a PR; never cancel runs on master.
+# Supersede stale runs on a PR; never cancel runs on main.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
