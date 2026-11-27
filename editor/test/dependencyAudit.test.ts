@@ -6,9 +6,9 @@ import { npmAudit } from "audit-ci";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import policy from "../audit-ci.json";
 
-const approvedAdvisory = "GHSA-fc5q-39xc-vjpf";
+const previouslyAllowlistedAdvisory = "GHSA-fc5q-39xc-vjpf";
 
-function report(advisory = approvedAdvisory, severity = "high") {
+function report(advisory = previouslyAllowlistedAdvisory, severity = "high") {
   return {
     auditReportVersion: 2,
     vulnerabilities: {
@@ -51,15 +51,12 @@ describe("dependency audit policy", () => {
   beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), "jot-audit-"));
     vi.stubEnv("PATH", `${directory}${delimiter}${process.env.PATH}`);
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-17T22:00:00Z"));
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     rmSync(directory, { recursive: true, force: true });
@@ -75,22 +72,20 @@ describe("dependency audit policy", () => {
     return npmAudit({ ...policy, directory, "package-manager": "npm" });
   }
 
-  it("allows the approved advisory, including its transitive effects", async () => {
-    const result = await audit(report());
-    expect(result.allowlistedAdvisoriesFound).toContain(approvedAdvisory);
+  it("allows a report without vulnerabilities", async () => {
+    const result = await audit({ auditReportVersion: 2, vulnerabilities: {}, metadata: {} });
     expect(result.failedLevelsFound).toEqual([]);
   });
 
   it.each(["moderate", "high", "critical"])(
-    "still blocks a different %s advisory in the same dependency",
+    "blocks %s advisories, including their transitive effects",
     async (severity) => {
       await expect(audit(report("GHSA-xxxx-xxxx-xxxx", severity)))
         .rejects.toThrow("Failed security audit");
     },
   );
 
-  it("blocks the approved advisory at the exception's expiry", async () => {
-    vi.setSystemTime(new Date("2026-12-01T00:00:00Z"));
+  it("does not exempt the previously allowlisted advisory", async () => {
     await expect(audit(report())).rejects.toThrow("Failed security audit");
   });
 
