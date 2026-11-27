@@ -1,12 +1,3 @@
 {
-  "moderate": true,
-  "allowlist": [
-    {
-      "GHSA-fc5q-39xc-vjpf": {
-        "active": true,
-        "expiry": "2026-12-01T00:00:00Z",
-        "notes": "Temporary alpha-release exception for picomatch in build/test tools only. No patched version is available as of 2026-11-17. Do not use untrusted glob patterns; remove this exception when an upstream fix is available."
-      }
-    }
-  ]
+  "moderate": true
 }

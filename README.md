@@ -81,8 +81,10 @@ formatted text reveals editable Markdown; lists remain rendered as you edit.
 
 **Copy and paste your way.** **⌘C** copies selected text as plain text;
 **⌘X** cuts the selection; **⇧⌘C** copies with formatting, or copies the whole
-note if nothing is selected. **⌘V** pastes plain text in the surrounding style; **⇧⌘V** keeps
-supported formatting. Paste a URL over selected text to create a link. Use
+note if nothing is selected. **⌘V** renders pasted Markdown; ordinary text keeps
+the surrounding style. **⇧⌘V** keeps supported clipboard formatting, or renders
+Markdown when no rich content is available. Pasting into a code block always
+keeps text literal. Paste a URL over selected text to create a link. Use
 **⌘K** to copy or export as Markdown, HTML, or plain text.
 
 **Keep notes organized.** Search includes note contents, and pinned notes
@@ -186,14 +188,14 @@ AppKit. If `tsc` or `vite` is missing, run `make bootstrap`.
 Versions follow [Semantic Versioning](https://semver.org). The numeric version
 in `Packaging/Info.plist` must match the release tag; pre-release suffixes
 such as `-alpha.1` appear only in the tag. After merging the version to
-`master`, run from a clean, up-to-date `master` checkout:
+`main`, run from a clean, up-to-date `main` checkout:
 
 ```sh
-make release VERSION=0.1.0-alpha.1
+make release VERSION=0.1.0
 ```
 
 This validates and pushes the tag. GitHub Actions runs CI and publishes the
-app ZIP, checksums, and source archives. See the [release checklist](CONTRIBUTING.md#alpha-release-checklist) before releasing.
+app ZIP, checksums, and source archives. See the [release checklist](CONTRIBUTING.md#release-checklist) before releasing.
 
 </details>
 

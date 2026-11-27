@@ -86,7 +86,7 @@ describe("clipboard shortcuts", () => {
     expect(jot.serialize("html")).toBe("<p><strong>bold</strong></p>");
   });
 
-  it("leaves Command-V to the native paste action and plain-paste handler", () => {
+  it("leaves Command-V to the native paste action and Markdown-paste handler", () => {
     expect(key("v").defaultPrevented).toBe(false);
     expect(postMessage).not.toHaveBeenCalled();
   });

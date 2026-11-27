@@ -1,7 +1,7 @@
 name: Release
 
 # Publishes an Apple Silicon app and source archives when a SemVer tag
-# (for example v0.1.0-alpha.1)
+# (for example v0.1.0)
 # is pushed. Create tags with `make release VERSION=...`.
 on:
   push:
