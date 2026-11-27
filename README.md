@@ -188,14 +188,14 @@ AppKit. If `tsc` or `vite` is missing, run `make bootstrap`.
 Versions follow [Semantic Versioning](https://semver.org). The numeric version
 in `Packaging/Info.plist` must match the release tag; pre-release suffixes
 such as `-alpha.1` appear only in the tag. After merging the version to
-`master`, run from a clean, up-to-date `master` checkout:
+`main`, run from a clean, up-to-date `main` checkout:
 
 ```sh
-make release VERSION=0.1.0-alpha.1
+make release VERSION=0.1.0
 ```
 
 This validates and pushes the tag. GitHub Actions runs CI and publishes the
-app ZIP, checksums, and source archives. See the [release checklist](CONTRIBUTING.md#alpha-release-checklist) before releasing.
+app ZIP, checksums, and source archives. See the [release checklist](CONTRIBUTING.md#release-checklist) before releasing.
 
 </details>
 

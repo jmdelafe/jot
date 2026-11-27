@@ -36,13 +36,7 @@ editor HTML, app bundles, signing credentials, or personal notes. Do not use
 editor tests.
 
 `npm run audit` blocks moderate-or-higher dependency advisories, including
-development dependencies. The only temporary exception is
-[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in
-picomatch's build/test tooling, which has no patched release as of 2026-11-17.
-Do not pass untrusted glob patterns to those tools. The exception in
-`editor/audit-ci.json` expires on **2026-12-01 at 00:00 UTC**; remove it when
-an upstream fix is available. Other advisories and audit service failures
-remain blocking.
+development dependencies. Audit service failures also remain blocking.
 
 ## Reporting problems
 
@@ -57,9 +51,9 @@ repository's **Security > Report a vulnerability** option when available. If it
 is unavailable, ask the maintainer to enable private reporting without posting
 exploit details or private data.
 
-## Alpha-release checklist
+## Release checklist
 
-Alpha releases include an **Apple Silicon app ZIP**, checksums, and source
+Releases include an **Apple Silicon app ZIP**, checksums, and source
 archives. `Packaging/Info.plist` is the app version
 source of truth: `CFBundleShortVersionString` is the release version, currently
 `0.1.0`, and `CFBundleVersion` is the increasing build number. The private
@@ -81,8 +75,8 @@ editor package has no independent release version.
 - Verify the downloaded ZIP's checksum, extract it, and confirm its app
   signature and bundled editor. Test installation on a clean macOS 26 machine
   without the build toolchain; include the Gatekeeper warning in release notes.
-- Only after approval, run `make release VERSION=<version>` from `master` (for
-  example `0.1.0-alpha.1`; see *Releases* in the README). The Release workflow
+- Only after approval, run `make release VERSION=<version>` from `main` (for
+  example `0.1.0`; see *Releases* in the README). The Release workflow
   publishes the ZIP and checksums from CI. Do not describe the ad-hoc-signed
   app as Developer ID signed or notarized.
 
