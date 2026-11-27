@@ -2,10 +2,68 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DOMParser } from "@tiptap/pm/model";
 import { createEditor, type JotEditor } from "../src/editor";
 import { renderedDocument, renderedState } from "../src/liveMarkdown";
+import { bridge } from "../src/bridge";
 
 vi.mock("../src/bridge", () => ({
   bridge: { ready: vi.fn(), contentChanged: vi.fn(), openLink: vi.fn() }
 }));
+
+const playbill = `## The Moonbeam Puppet Show
+
+
+
+**Cast:** 🌙 Luna · 🦊 Fig · 🐇 Pip
+
+
+
+The curtain rises when Pip rings the brass bell.
+
+
+
+### The moon garden
+
+
+
+**Props**
+
+- A paper telescope
+
+- A silver watering can
+
+- A basket of stars
+
+  - 🌟 Hide the brightest star under the lid.
+
+
+
+**Stage direction:** Fig tips the basket toward the audience.
+
+
+
+### The teacup sea
+
+
+
+- 🌊 **Waves:** Unroll the blue ribbon.
+
+- ⛵ **Boat:** Fold the paper map.
+
+- 🔔 **Sound cue**
+
+  - 🎵 Ring the bell when the boat docks.
+
+
+
+**Final cue:** Call \`encore\` from behind the curtain.
+
+
+
+> [!NOTE]
+
+> The moon takes the last bow.
+
+
+`;
 
 describe("clipboard paste", () => {
   let jot: JotEditor;
@@ -44,11 +102,11 @@ describe("clipboard paste", () => {
     expect(jot.editor.getHTML()).toBe("<p><strong>boerld</strong></p>");
   });
 
-  it("keeps Markdown syntax and URLs literal", () => {
+  it("renders inline Markdown without autolinking bare URLs", () => {
     jot.editor.commands.setContent("<p></p>");
     jot.editor.commands.setTextSelection(1);
     paste({ "text/plain": "**bold** https://example.com " });
-    expect(jot.editor.getHTML()).toBe("<p>**bold** https://example.com </p>");
+    expect(jot.serialize("html")).toBe("<p><strong>bold</strong> https://example.com </p>");
   });
 
   it("splits lines into paragraphs, keeping blank lines", () => {
@@ -77,7 +135,7 @@ describe("clipboard paste", () => {
     expect(jot.editor.state.doc.firstChild!.textContent).toBe("ax\ny");
   });
 
-  it("pastes literally while a block shows its Markdown source", () => {
+  it("renders pasted Markdown while a block shows its source", () => {
     jot.editor.commands.setContent("<h3>Hello</h3><p>Next</p>");
     jot.editor.commands.setTextSelection(3);
     jot.editor.view.dom.dispatchEvent(new FocusEvent("focus"));
@@ -87,10 +145,10 @@ describe("clipboard paste", () => {
 
     const heading = renderedDocument(jot.editor).firstChild!;
     expect(heading.type.name).toBe("heading");
-    expect(heading.textContent).toBe("He**x**llo");
-    expect(heading.firstChild!.marks).toEqual([]);
+    expect(heading.textContent).toBe("Hexllo");
+    expect(heading.child(1).marks[0].type.name).toBe("bold");
     expect(jot.editor.state.doc.firstChild!.type.name).toBe("markdownSource");
-    expect(renderedState(jot.editor).selection.from).toBe(8);
+    expect(renderedState(jot.editor).selection.from).toBe(4);
   });
 
   it("preserves supported rich formatting on an explicit formatted paste", () => {
@@ -144,9 +202,63 @@ describe("clipboard paste", () => {
     expect(jot.serialize("html")).toBe("<h3>Hello</h3>");
   });
 
-  it("falls back to literal plain text without HTML", () => {
+  it("falls back to Markdown without HTML", () => {
     jot.pasteFormatted({ html: null, text: "**bold**\nhttps://example.com " });
-    expect(jot.serialize("html")).toBe("<p>**bold**</p><p>https://example.com </p>");
+    expect(jot.serialize("html")).toBe("<p><strong>bold</strong> https://example.com </p>");
+  });
+
+  it("preserves spaces around inline Markdown when replacing text inside a paragraph", () => {
+    jot.editor.commands.setContent("<p>beforeXafter</p>");
+    jot.editor.commands.setTextSelection({ from: 7, to: 8 });
+    paste({ "text/plain": " **bold** " });
+    expect(jot.serialize("html")).toBe("<p>before <strong>bold</strong> after</p>");
+    jot.editor.commands.undo();
+    expect(jot.serialize("html")).toBe("<p>beforeXafter</p>");
+  });
+
+  it.each(["normal", "formatted"] as const)("renders the playbill on a %s paste and persists it", mode => {
+    vi.mocked(bridge.contentChanged).mockClear();
+    jot.editor.view.dom.dispatchEvent(new FocusEvent("focus"));
+    if (mode === "normal") paste({ "text/plain": playbill });
+    else jot.pasteFormatted({ html: null, text: playbill });
+
+    const html = jot.serialize("html");
+    const content = document.createElement("div");
+    content.innerHTML = html;
+    expect(content.querySelector("h2")?.textContent).toBe("The Moonbeam Puppet Show");
+    expect(Array.from(content.querySelectorAll("h3"), node => node.textContent)).toEqual(["The moon garden", "The teacup sea"]);
+    expect(content.querySelector("strong")?.textContent).toBe("Cast:");
+    expect(content.querySelectorAll("ul ul")).toHaveLength(2);
+    expect(content.querySelector("code")?.textContent).toBe("encore");
+    expect(content.querySelectorAll("blockquote")).toHaveLength(2);
+    expect(html).toContain("The moon takes the last bow.");
+    expect(html).not.toContain("markdown-source");
+    expect(bridge.contentChanged).toHaveBeenLastCalledWith("note-1", renderedDocument(jot.editor).toJSON());
+
+    jot.editor.commands.undo();
+    expect(jot.serialize("html")).toBe("<p></p>");
+    jot.editor.commands.redo();
+    expect(jot.serialize("html")).toBe(html);
+    jot.loadNote({ id: "note-1", document: renderedDocument(jot.editor).toJSON() });
+    expect(jot.serialize("html")).toBe(html);
+  });
+
+  it("renders lists, tasks, links and fences without interpreting HTML or loading resources", () => {
+    const parse = vi.spyOn(jot.editor.storage.markdown.parser, "parse");
+    paste({ "text/plain": "- [x] done\n- [ ] pending\n\n[site](https://example.com)\n\n```txt\n**literal**\n```\n\n**safe** <img src=\"https://example.com/image\"> ![image](https://example.com/image)" });
+    expect(parse.mock.results[0].value).not.toContain("<img");
+    parse.mockRestore();
+    const html = jot.serialize("html");
+    expect(html).toContain('data-type="taskList"');
+    expect(html).toContain('data-checked="true"');
+    expect(html).toContain('data-checked="false"');
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain("<code class=\"language-txt\">**literal**</code>");
+    expect(html).toContain("&lt;img");
+    expect(html).not.toContain("<img");
+    // Clipboard-only parser options must not affect stored HTML or later editing.
+    jot.editor.commands.setContent("<h2>Still formatted</h2>");
+    expect(jot.serialize("html")).toBe("<h2>Still formatted</h2>");
   });
 
   it("keeps code blocks plain even on a formatted paste", () => {

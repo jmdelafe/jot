@@ -5,7 +5,18 @@ import { Transform } from "@tiptap/pm/transform";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 interface MarkdownRuntime {
-  parser: { parse(markdown: string): string };
+  parser: {
+    parse(markdown: string, options?: { inline?: boolean }): string;
+    md: {
+      options: { html: boolean };
+      renderer: {
+        rules: {
+          image: (...args: never[]) => string;
+          softbreak: (...args: never[]) => string;
+        };
+      };
+    };
+  };
   serializer: { serialize(document: ProseMirrorNode): string };
 }
 
