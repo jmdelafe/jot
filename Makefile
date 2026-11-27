@@ -72,10 +72,10 @@ dist: bundle
 run: bundle
 	open "$(APP_BUNDLE)"
 
-## Tags origin/master as v$(VERSION) (SemVer) and pushes it to trigger the
-## Release workflow, e.g. `make release VERSION=0.1.0-alpha.1`.
+## Tags origin/main as v$(VERSION) (SemVer) and pushes it to trigger the
+## Release workflow, e.g. `make release VERSION=0.1.0`.
 release:
-	@test -n "$(VERSION)" || { echo "usage: make release VERSION=0.1.0-alpha.1" >&2; exit 1; }
+	@test -n "$(VERSION)" || { echo "usage: make release VERSION=0.1.0" >&2; exit 1; }
 	scripts/release.sh "$(VERSION)"
 
 clean:
