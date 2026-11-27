@@ -81,8 +81,10 @@ formatted text reveals editable Markdown; lists remain rendered as you edit.
 
 **Copy and paste your way.** **⌘C** copies selected text as plain text;
 **⌘X** cuts the selection; **⇧⌘C** copies with formatting, or copies the whole
-note if nothing is selected. **⌘V** pastes plain text in the surrounding style; **⇧⌘V** keeps
-supported formatting. Paste a URL over selected text to create a link. Use
+note if nothing is selected. **⌘V** renders pasted Markdown; ordinary text keeps
+the surrounding style. **⇧⌘V** keeps supported clipboard formatting, or renders
+Markdown when no rich content is available. Pasting into a code block always
+keeps text literal. Paste a URL over selected text to create a link. Use
 **⌘K** to copy or export as Markdown, HTML, or plain text.
 
 **Keep notes organized.** Search includes note contents, and pinned notes

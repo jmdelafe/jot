@@ -14,7 +14,7 @@ import { LinkPopover } from "./linkPopover";
 import type { ClipboardContent, ExportFormat, JSONValue, NotePayload } from "./protocol";
 import { LiveMarkdown, renderedDocument, renderedState, withRenderedMarkdown } from "./liveMarkdown";
 import { MarkdownHistory, markdownHistoryKey } from "./markdownHistory";
-import { PlainTextPaste, insertPlainText } from "./plainPaste";
+import { MarkdownPaste, insertMarkdownText, insertPlainText } from "./plainPaste";
 import { FindInNote } from "./findInNote";
 
 export interface JotEditor {
@@ -109,7 +109,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       Markdown,
       LiveMarkdown,
       MarkdownHistory,
-      PlainTextPaste,
+      MarkdownPaste,
       FindInNote,
       createShortcutsExtension(() => linkPopover.open(editorRef.current!))
     ],
@@ -180,7 +180,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
       withRenderedMarkdown(editor, () => {
         const { state } = editor;
         if (!html) {
-          insertPlainText(editor, text);
+          insertMarkdownText(editor, text);
           return;
         }
         const template = document.createElement("template");
@@ -207,7 +207,7 @@ export function createEditor(mountEl: HTMLElement): JotEditor {
           context: state.selection.$from
         });
         if (slice.content.size === 0) {
-          insertPlainText(editor, text);
+          insertMarkdownText(editor, text);
           return;
         }
         if (state.selection.$from.parent.type.spec.code) {
